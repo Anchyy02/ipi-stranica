@@ -1,0 +1,82 @@
+<article>
+  <div class="container">
+    <div class="toolbar">
+      <button (click)="addCard('todo')">Dodaj karticu</button>
+    </div>
+    
+    <div class="board">
+      <div class="col">
+        <h3>To Do</h3>
+        <div class="lane" 
+             (dragover)="onDragOver($event)"
+             (drop)="onDrop('todo', $event)">
+          <div *ngFor="let card of todoCards; trackBy: trackByCardId"
+               class="card"
+               draggable="true"
+               [class.dragging]="draggedCard === card"
+               (dragstart)="onDragStart(card, 'todo', $event)"
+               (dragend)="onDragEnd()">
+            <div contenteditable="true">{{card.text}}</div>
+            <div class="tools">
+              <button class="icon-btn" (click)="deleteCard('todo', card, $event)" title="Obriši">×</button>
+            </div>
+          </div>
+        </div>
+        <div class="add">
+          <button (click)="addCard('todo')">Dodaj</button>
+          <button class="ghost" (click)="clearColumn('todo')">Obriši sve</button>
+        </div>
+      </div>
+
+      <div class="col">
+        <h3>Doing</h3>
+        <div class="lane"
+             (dragover)="onDragOver($event)"
+             (drop)="onDrop('doing', $event)">
+          <div *ngFor="let card of doingCards; trackBy: trackByCardId"
+               class="card"
+               draggable="true"
+               [class.dragging]="draggedCard === card"
+               (dragstart)="onDragStart(card, 'doing', $event)"
+               (dragend)="onDragEnd()">
+            <div contenteditable="true">{{card.text}}</div>
+            <div class="tools">
+              <button class="icon-btn" (click)="deleteCard('doing', card, $event)" title="Obriši">×</button>
+            </div>
+          </div>
+        </div>
+        <div class="add">
+          <button (click)="addCard('doing')">Dodaj</button>
+          <button class="ghost" (click)="clearColumn('doing')">Obriši sve</button>
+        </div>
+      </div>
+
+      <div class="col">
+        <h3>Done</h3>
+        <div class="lane"
+             (dragover)="onDragOver($event)"
+             (drop)="onDrop('done', $event)">
+          <div *ngFor="let card of doneCards; trackBy: trackByCardId"
+               class="card"
+               draggable="true"
+               [class.dragging]="draggedCard === card"
+               (dragstart)="onDragStart(card, 'done', $event)"
+               (dragend)="onDragEnd()">
+            <div contenteditable="true">{{card.text}}</div>
+            <div class="tools">
+              <button class="icon-btn" (click)="deleteCard('done', card, $event)" title="Obriši">×</button>
+            </div>
+          </div>
+        </div>
+        <div class="add">
+          <button (click)="addCard('done')">Dodaj</button>
+          <button class="ghost" (click)="clearColumn('done')">Obriši sve</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <a routerLink="/student-fun-zone" class="btn">← Nazad</a>
+    </div>
+  </div>
+</article>

@@ -1,0 +1,29 @@
+<article>
+  <div class="wrap">
+    <h2>BINGO</h2>
+    <p class="subtitle">Klikni ćeliju da upišeš inicijale. Ista osoba može potpisati najviše 2 puta.</p>
+    <div class="table-wrap">
+      <table>
+        <tr *ngFor="let row of cells; let r = index">
+          <td *ngFor="let cell of row; let c = index" 
+              (click)="toggleCell(r, c)"
+              [class.signed]="cell.signed"
+              [class.win]="cell.win">
+            {{ cell.text }}
+            <span *ngIf="cell.initials" class="initials">{{ cell.initials }}</span>
+          </td>
+        </tr>
+      </table>
+    </div>
+    <div class="notes">
+      <p>Skupi 5 potpisa zaredom – BINGO!</p>
+      <p>Svaka osoba može staviti inicijale na vaš papir samo dva puta.</p>
+    </div>
+    <div class="msg">{{ bingoMsg }}</div>
+    <div class="btn-row">
+      <button class="btn" (click)="resetBoard()">Resetuj tablu</button>
+      <a [routerLink]="['/student-fun-zone']" class="btn">Nazad na igre</a>
+    </div>
+  </div>
+</article>
+

@@ -1,0 +1,36 @@
+.games-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-5);
+  margin-top: var(--space-6);
+}
+
+.game-card {
+  background: linear-gradient(135deg, #f6f9fc 0%, #ffffff 100%);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: var(--space-6);
+  text-decoration: none;
+  color: var(--text);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.game-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(32, 124, 245, 0.15);
+  border-color: var(--primary);
+}
+
+.game-card h3 {
+  color: var(--primary-600);
+  margin: 0 0 var(--space-3);
+  font-size: 1.4rem;
+}
+
+.game-card p {
+  color: var(--muted);
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}

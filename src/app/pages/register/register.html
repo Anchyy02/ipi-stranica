@@ -1,0 +1,27 @@
+<article>
+  <div class="auth-container">
+    <h2>Registracija</h2>
+    <form (ngSubmit)="onSubmit()" class="auth-form">
+      <div class="form-group">
+        <label for="name">Ime i prezime:</label>
+        <input type="text" id="name" name="name" [(ngModel)]="name" required>
+      </div>
+      <div class="form-group">
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email" [(ngModel)]="email" required>
+      </div>
+      <div class="form-group">
+        <label for="password">Lozinka:</label>
+        <input type="password" id="password" name="password" [(ngModel)]="password" required minlength="6">
+      </div>
+      <div class="form-group">
+        <label for="confirmPassword">Potvrdi lozinku:</label>
+        <input type="password" id="confirmPassword" name="confirmPassword" [(ngModel)]="confirmPassword" required minlength="6">
+      </div>
+      <div *ngIf="errorMessage" class="error-message show">{{ errorMessage }}</div>
+      <div *ngIf="successMessage" class="success-message show">{{ successMessage }}</div>
+      <button type="submit" class="btn-primary">Registruj se</button>
+    </form>
+    <p class="auth-link">Već imaš nalog? <a [routerLink]="['/login']">Prijavi se</a></p>
+  </div>
+</article>

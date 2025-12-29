@@ -1,0 +1,49 @@
+<article>
+  <div class="container">
+    <h1>Vision Board – Kreiraj svoju viziju</h1>
+    <p class="desc">Dodaj bilješke, slike i citate. Pomjeri ih po ploči.</p>
+    
+    <div class="toolbar">
+      <button (click)="addNote()">+ Bilješka</button>
+      <button (click)="addImage()">+ Slika</button>
+      <button (click)="addQuote()">+ Citat</button>
+      <button (click)="fileInput.click()">📁 Učitaj sliku</button>
+      <input #fileInput type="file" accept="image/*" (change)="onFileChange($event)" style="display:none">
+      <button (click)="save()">Sačuvaj</button>
+      <button (click)="clear()">Očisti</button>
+    </div>
+
+    <div #board class="board"
+         (mousemove)="onMouseMove($event)"
+         (mouseup)="onMouseUp()"
+         (touchmove)="onTouchMove($event)"
+         (touchend)="onTouchEnd()">
+      
+      <div *ngFor="let item of items"
+           class="item"
+           [class.note]="item.type === 'note'"
+           [class.quote]="item.type === 'quote'"
+           [class.image-wrap]="item.type === 'image'"
+           [attr.data-color]="item.color"
+           [style.left.px]="item.x"
+           [style.top.px]="item.y"
+           (mousedown)="onMouseDown(item, $event)"
+           (touchstart)="onTouchStart(item, $event)">
+        
+        <button class="delete-btn" (click)="deleteItem(item.id, $event)">×</button>
+        
+        <textarea *ngIf="item.type === 'note'" 
+                  [(ngModel)]="item.content" 
+                  placeholder="Upiši bilješku..."></textarea>
+        
+        <div *ngIf="item.type === 'quote'" class="quote-text">{{item.content}}</div>
+        
+        <img *ngIf="item.type === 'image'" [src]="item.content" alt="board image">
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <a routerLink="/student-fun-zone" class="btn">← Nazad</a>
+    </div>
+  </div>
+</article>

@@ -1,0 +1,40 @@
+<article>
+  <div class="wrap">
+    <h1>Kviz – Web programiranje</h1>
+    <p class="desc">Iz baze od 30 pitanja nasumično se bira 10. Odaberite tačne odgovore i pošaljite.</p>
+    
+    <div class="quiz">
+      <div *ngFor="let question of currentQuestions; let i = index" 
+           class="q"
+           [class.correct]="submitted && question.isCorrect"
+           [class.wrong]="submitted && !question.isCorrect">
+        <h3>{{i + 1}}) {{question.q}}</h3>
+        <div class="answers">
+          <label *ngFor="let answer of question.shuffledAnswers; let j = index"
+                 [style.fontWeight]="submitted && answer.originalIndex === question.c ? '700' : 'normal'">
+            <input type="radio" 
+                   [name]="'q' + i" 
+                   [value]="answer.originalIndex"
+                   [checked]="question.userAnswer === answer.originalIndex"
+                   [disabled]="submitted"
+                   (change)="selectAnswer(i, answer.originalIndex)">
+            {{answer.text}}
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button *ngIf="!submitted" (click)="submit()">Pošalji odgovore</button>
+      <button *ngIf="submitted" (click)="retry()">Novi set pitanja</button>
+    </div>
+
+    <div class="score" *ngIf="score !== null">Rezultat: {{score}} / {{currentQuestions.length}}</div>
+    
+    <div class="footer-note muted">Savjet: neka pitanja imaju više sličnih odgovora – pažljivo čitajte.</div>
+
+    <div class="btn-row">
+      <a routerLink="/student-fun-zone" class="btn">← Nazad</a>
+    </div>
+  </div>
+</article>

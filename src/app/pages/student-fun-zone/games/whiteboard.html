@@ -1,0 +1,29 @@
+<article>
+  <div class="wrap">
+    <h1>Whiteboard – Crtanje</h1>
+    <p class="desc">Crtaj, briši, sačuvaj sliku.</p>
+    
+    <div class="toolbar">
+      <label>Boja: <input type="color" [(ngModel)]="color"></label>
+      <label>Debljina: <input type="range" min="1" max="20" [(ngModel)]="size"></label>
+      <button (click)="toggleErase()">{{eraseBtnText}}</button>
+      <button (click)="clear()">Očisti</button>
+      <button (click)="save()">Sačuvaj</button>
+    </div>
+
+    <div class="canvas-wrap">
+      <canvas #canvas
+              (mousedown)="onStart($event)"
+              (mousemove)="onMove($event)"
+              (mouseup)="onEnd()"
+              (mouseleave)="onEnd()"
+              (touchstart)="onStart($event)"
+              (touchmove)="onMove($event)"
+              (touchend)="onEnd()"></canvas>
+    </div>
+
+    <div class="btn-row">
+      <a routerLink="/student-fun-zone" class="btn">← Nazad</a>
+    </div>
+  </div>
+</article>
