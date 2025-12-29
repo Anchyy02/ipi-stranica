@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Login - Kursevi IPI</title>
+		<link rel="stylesheet" href="css/izgled.css" type="text/css" />
+        <link rel="stylesheet" href="css/auth.css" type="text/css" />
+        <link rel="icon" href="favicon.ico" />
+    </head>
+    <body>
+        <header>
+			<a href="index.html">
+				<img src="slike/logo-ipi.png" alt="Kursevi IPI">
+			</a>
+			<nav>
+				<ul>
+					<li><a href="index.html">O kursevima</a></li>
+					<li><a href="popis.html">Popis kurseva</a></li>
+					<li><a href="raspored.html">Raspored kurseva</a></li>
+					<li><a href="StudentFunZone.html">Student Fun Zone</a></li>
+					<li><a href="kontakt.html">Kontakt</a></li>
+				</ul>
+			</nav>
+		</header>
+		<article>
+			<div class="auth-container">
+                <h2>Prijava</h2>
+                <form id="loginForm" class="auth-form">
+                    <div class="form-group">
+                        <label for="email">Email:</label>
+                        <input type="email" id="email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Lozinka:</label>
+                        <input type="password" id="password" name="password" required>
+                    </div>
+                    <div id="errorMessage" class="error-message"></div>
+                    <button type="submit" class="btn-primary">Prijavi se</button>
+                </form>
+                <p class="auth-link">Nemaš nalog? <a href="register.html">Registruj se</a></p>
+            </div>
+        </article>
+		<footer>&copy; Internacionalna poslovno-informaciona akademija Tuzla</footer>
+		<script src="js/auth.js"></script>
+    </body>
+</html>

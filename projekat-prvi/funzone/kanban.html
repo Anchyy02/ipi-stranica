@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+  <meta charset="utf-8" />
+  <title>Kanban Board</title>
+  <style>
+    :root { --primary: #c30f10; --border:#e5e7eb; }
+    body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:#f6f7fb; }
+    .toolbar { display:flex; gap:8px; padding:10px; border-bottom:1px solid var(--border); position:sticky; top:0; background:#fff; z-index:2; }
+    .board { display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; padding:12px; }
+    .col { background:#fff; border:1px solid var(--border); border-radius:12px; min-height:360px; display:flex; flex-direction:column; }
+    .col h3 { margin:12px; color:#a30d0e; }
+    .lane { flex:1; padding:8px 8px 20px; display:flex; flex-direction:column; gap:8px; }
+    .card { background:#fff; border:1px solid var(--border); border-radius:10px; padding:10px; box-shadow:0 6px 16px rgba(16,24,40,.06); cursor:grab; position:relative; }
+    .card .tools { position:absolute; top:6px; right:6px; display:none; gap:6px; }
+    .card:hover .tools { display:flex; }
+    .icon-btn { background:#efefef; border:1px solid var(--border); color:#333; border-radius:6px; padding:2px 6px; cursor:pointer; font-size:12px; }
+    .icon-btn:hover { background:#e5e5e5; }
+    .card:active { cursor:grabbing; }
+    .add { margin: 0 12px 12px; display:flex; gap:8px; flex-wrap:wrap; }
+    button { background: var(--primary); color:#fff; border:none; border-radius:8px; padding:8px 12px; cursor:pointer; }
+    .ghost { background:#fff; color:#333; border:1px solid var(--border); }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button id="addCard">Dodaj karticu</button>
+  </div>
+  <div class="board" id="board">
+    <div class="col"><h3>To Do</h3><div class="lane" data-col="todo"></div><div class="add"><button data-target="todo">Dodaj</button><button class="ghost" data-clear="todo">Obriši sve</button></div></div>
+    <div class="col"><h3>Doing</h3><div class="lane" data-col="doing"></div><div class="add"><button data-target="doing">Dodaj</button><button class="ghost" data-clear="doing">Obriši sve</button></div></div>
+    <div class="col"><h3>Done</h3><div class="lane" data-col="done"></div><div class="add"><button data-target="done">Dodaj</button><button class="ghost" data-clear="done">Obriši sve</button></div></div>
+  </div>
+  <script>
+    const lanes = document.querySelectorAll('.lane');
+    function createCard(text){
+      const d = document.createElement('div');
+      d.className = 'card';
+      d.draggable = true;
+      d.innerHTML = `
+        <div contenteditable="true">${text || 'Nova kartica'}</div>
+        <div class="tools">
+          <button class="icon-btn" title="Obriši">×</button>
+        </div>`;
+      d.addEventListener('dragstart', e=>{ e.dataTransfer.setData('text/plain',''); d.classList.add('dragging'); });
+      d.addEventListener('dragend', ()=> d.classList.remove('dragging'));
+      const del = d.querySelector('.icon-btn');
+      del.addEventListener('click', (e)=>{ e.stopPropagation(); if(confirm('Obrisati karticu?')) d.remove(); });
+      return d;
+    }
+    function addCardTo(col){ document.querySelector('.lane[data-col="'+col+'"]').appendChild(createCard()); }
+    document.getElementById('addCard').onclick = ()=> addCardTo('todo');
+    document.querySelectorAll('.add button[data-target]').forEach(b=> b.onclick = ()=> addCardTo(b.dataset.target));
+
+    // Clear column
+    document.querySelectorAll('button[data-clear]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const col = btn.getAttribute('data-clear');
+        const oldLane = document.querySelector('.lane[data-col="'+col+'"]');
+        const lane = oldLane.cloneNode(false);
+        if(confirm('Obrisati sve kartice u koloni?')){
+          oldLane.replaceWith(lane);
+          attachLaneDnD(lane);
+        }
+      });
+    });
+
+    function attachLaneDnD(l){
+      l.addEventListener('dragover', e=>{
+        e.preventDefault();
+        const dragging = document.querySelector('.dragging');
+        const after = Array.from(l.querySelectorAll('.card:not(.dragging)')).find(n=> e.clientY <= n.getBoundingClientRect().top + n.offsetHeight/2);
+        if(!dragging) return;
+        if(after) l.insertBefore(dragging, after); else l.appendChild(dragging);
+      });
+    }
+    document.querySelectorAll('.lane').forEach(attachLaneDnD);
+
+    // Seed examples
+    addCardTo('todo'); addCardTo('doing'); addCardTo('done');
+  </script>
+</body>
+</html>

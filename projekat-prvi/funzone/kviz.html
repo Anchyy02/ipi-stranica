@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+  <meta charset="utf-8" />
+  <title>Kviz – Web programiranje</title>
+  <style>
+    :root{ --surface:#fff; --border:#e5e7eb; --text:#1f2937; --muted:#6b7280; --primary:#c30f10; --primary-600:#a30d0e; --shadow:0 8px 24px rgba(16,24,40,.08); --radius:14px; }
+    *{ box-sizing: border-box; }
+    body{ margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color:var(--text); }
+    .wrap{ width:min(900px, 95vw); margin:20px auto; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:22px; }
+    h1{ margin:0 0 8px; color:var(--primary-600); text-align:center; }
+    .desc{ text-align:center; color:var(--muted); margin:0 0 18px; }
+    .q{ padding:14px; border:1px solid var(--border); border-radius:12px; margin-bottom:12px; background:#fff; }
+    .q h3{ margin:0 0 10px; font-size:16px; }
+    .answers label{ display:block; margin:6px 0; cursor:pointer; }
+    .answers input{ margin-right:8px; }
+    .actions{ display:flex; gap:10px; justify-content:center; margin-top:14px; }
+    button{ background:var(--primary); color:#fff; border:none; border-radius:10px; padding:10px 18px; cursor:pointer; font-weight:700; }
+    button:hover{ background:var(--primary-600); }
+    .score{ text-align:center; margin-top:10px; font-weight:700; }
+    .correct{ background:#ecfdf5; border-color:#a7f3d0; }
+    .wrong{ background:#fef2f2; border-color:#fecaca; }
+    .muted{ color:var(--muted); font-size:13px; }
+    .footer-note{ text-align:center; margin-top:8px; color:var(--muted); font-size:12px; }
+    @media print{ .actions{ display:none; } .wrap{ box-shadow:none; border:none; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Kviz – Web programiranje</h1>
+    <p class="desc">Iz baze od 30 pitanja nasumično se bira 10. Odaberite tačne odgovore i pošaljite.</p>
+    <div id="quiz"></div>
+    <div class="actions">
+      <button id="submit">Pošalji odgovore</button>
+      <button id="retry" style="display:none">Novi set pitanja</button>
+    </div>
+    <div class="score" id="score"></div>
+    <div class="footer-note muted">Savjet: neka pitanja imaju više sličnih odgovora – pažljivo čitajte.</div>
+  </div>
+
+  <script>
+    (function(){
+      const bank = [
+        {q:'Šta znači skraćenica HTML?', a:['HyperText Markup Language','HighText Markdown Language','Home Tool Markup Language','Hyperlink Text Making Language'], c:0},
+        {q:'Koji meta tag omogućava responzivan prikaz na mobilnim uređajima?', a:['<meta charset="utf-8">','<meta name="viewport" content="width=device-width, initial-scale=1">','<meta name="mobile" content="true">','<meta name="scale" content="1">'], c:1},
+        {q:'Koji HTTP metod se koristi za dobijanje resursa bez izmjena?', a:['POST','PUT','GET','PATCH'], c:2},
+        {q:'Koji CSS selektor ima najveću specifičnost?', a:['Klasa (.btn)','Element (div)','ID (#main)','Universalan (*)'], c:2},
+        {q:'Koji je ispravan način dodavanja eksternog CSS-a?', a:['<style src="styles.css">','<link rel="stylesheet" href="styles.css">','<css href="styles.css">','<script href="styles.css">'], c:1},
+        {q:'Koji tag je semantički pogodan za glavni sadržaj stranice?', a:['<section>','<article>','<main>','<div role="main">'], c:2},
+        {q:'Šta vraća izraz typeof null u JavaScriptu?', a:['null','object','undefined','number'], c:1},
+        {q:'Kako pristupiti prvom elementu sa klasom "item" u DOM-u?', a:['document.getElementById("item")','document.querySelector(".item")','document.querySelectorAll("#item")[0]','window.item[0]'], c:1},
+        {q:'Koji atribut unutar a taga otvara link u novom tabu?', a:['rel="noopener"','target="_blank"','open','window="new"'], c:1},
+        {q:'Koja CSS osobina postavlja raspored elemenata kao fleks-kontejner?', a:['display: grid;','display: flex;','position: flex;','flex: container;'], c:1},
+        {q:'Koji način čuva podatke u browseru i ostaje nakon reload-a?', a:['sessionStorage','localStorage','var storage','cookiesession'], c:1},
+        {q:'Šta je JSON?', a:['Baza podataka','Format za razmjenu podataka','Tip funkcije u JS','Sistem šablona'], c:1},
+        {q:'Koji atribut poboljšava dostupnost za opis slike?', a:['title','alt','aria','label'], c:1},
+        {q:'Koji HTTP status označava uspjeh sa sadržajem?', a:['200','301','401','500'], c:0},
+        {q:'Kako spriječiti podrazumijevani submit forme u JS?', a:['event.stop()','return false','event.preventDefault()','form.reset()'], c:2},
+        {q:'Koja direktiva u CSS-u definiše medijske upite?', a:['@use','@media','@import','@query'], c:1},
+        {q:'Koja je razlika između let i var?', a:['Nema razlike','let ima blok-scope, var funkcijski','var ima blok-scope, let funkcijski','let je hoisted, var nije'], c:1},
+        {q:'Koji element se koristi za navigaciju?', a:['<footer>','<nav>','<aside>','<header>'], c:1},
+        {q:'Koja CSS osobina kontroliše razmak između linija teksta?', a:['letter-spacing','line-height','word-spacing','text-indent'], c:1},
+        {q:'Kako se u JS pravilan niz kopira plitko?', a:['const b = a;','const b = a.clone();','const b = [...a];','copy(a,b);'], c:2},
+        {q:'Koji je ispravan način za komentare u CSS-u?', a:['// komentar','<!-- komentar -->','/* komentar */','-- komentar'], c:2},
+        {q:'Koji header je važan za CORS odgovore?', a:['Access-Control-Allow-Origin','Content-Type','Accept','Authorization'], c:0},
+        {q:'Šta radi metoda Array.prototype.map?', a:['Filtrira elemente','Transformiše u novi niz','Brisanje elemenata','Sortira opadajuće'], c:1},
+        {q:'Koji je semantički element za dno stranice?', a:['<footer>','<bottom>','<down>','<end>'], c:0},
+        {q:'Šta znači DRY u programiranju?', a:['Don’t Repeat Yourself','Do Repeat Yourself','Debugging Requires You','Dynamic Runtime YAML'], c:0},
+        {q:'Koji CSS modul omogućava dvo-dimenzionalni raspored?', a:['Flexbox','Grid','Float','Position'], c:1},
+        {q:'Koja je preporučena širina sadržaja za čitljivost teksta?', a:['20-30 znakova u redu','45-75 znakova u redu','120-160 znakova u redu','Nije bitno'], c:1},
+        {q:'Koji HTML atribut označava obavezno polje?', a:['placeholder','required','pattern','minlength'], c:1},
+        {q:'Šta je debounce u JS-u?', a:['Odgoda poziva funkcije dok se događaji ne smire','Brže izvršenje funkcije','Paralelno izvršenje','Keširanje rezultata'], c:0},
+        {q:'Koji tag je prikladan za samostalan sadržaj (blog post, kartica)?', a:['<article>','<div>','<section>','<span>'], c:0}
+      ];
+
+      const quizEl = document.getElementById('quiz');
+      const submitBtn = document.getElementById('submit');
+      const retryBtn = document.getElementById('retry');
+      const scoreEl = document.getElementById('score');
+
+      function pick(n, arr){
+        const idxs = arr.map((_,i)=>i);
+        for(let i=idxs.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [idxs[i],idxs[j]]=[idxs[j],idxs[i]]; }
+        return idxs.slice(0,n).map(i=> arr[i]);
+      }
+      function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+      let current = [];
+      function render(){
+        scoreEl.textContent = '';
+        retryBtn.style.display = 'none';
+        submitBtn.disabled = false;
+        current = pick(10, bank).map((q,i)=> ({...q, i}));
+        quizEl.innerHTML = '';
+        current.forEach((item, idx)=>{
+          const answers = item.a.map((text, ai)=> ({text, ai}));
+          shuffle(answers);
+          const idPrefix = 'q'+idx+'_';
+          const div = document.createElement('div');
+          div.className = 'q';
+          div.innerHTML = `<h3>${idx+1}) ${escapeHtml(item.q)}</h3><div class="answers"></div>`;
+          const ansEl = div.querySelector('.answers');
+          answers.forEach(({text, ai}, j)=>{
+            const id = idPrefix+j;
+            const label = document.createElement('label');
+            label.innerHTML = `<input type="radio" name="q${idx}" value="${ai}" id="${id}"> ${escapeHtml(text)}`;
+            ansEl.appendChild(label);
+          });
+          quizEl.appendChild(div);
+          // store mapping to know which index is correct after shuffle
+          item.shuffleMap = answers; // array of {text, ai}
+        });
+      }
+
+      function grade(){
+        let score = 0;
+        const blocks = Array.from(quizEl.querySelectorAll('.q'));
+        blocks.forEach((block, idx)=>{
+          const selected = block.querySelector('input[type=radio]:checked');
+          const correctIndex = current[idx].c;
+          // find which radio has value == correctIndex
+          const radios = Array.from(block.querySelectorAll('input[type=radio]'));
+          const correctRadio = radios.find(r=> Number(r.value) === correctIndex);
+          if(selected){
+            if(Number(selected.value) === correctIndex){
+              block.classList.add('correct');
+              score++;
+            } else {
+              block.classList.add('wrong');
+            }
+          } else {
+            block.classList.add('wrong');
+          }
+          if(correctRadio){
+            // visually mark the correct label
+            correctRadio.parentElement.style.fontWeight = '700';
+          }
+          // disable further changes
+          radios.forEach(r=> r.disabled = true);
+        });
+        scoreEl.textContent = `Rezultat: ${score} / ${current.length}`;
+        submitBtn.disabled = true;
+        retryBtn.style.display = 'inline-block';
+      }
+
+      function escapeHtml(s){
+        return String(s).replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
+      }
+
+      submitBtn.addEventListener('click', grade);
+      retryBtn.addEventListener('click', ()=>{ quizEl.innerHTML=''; render(); window.scrollTo({top:0, behavior:'smooth'}); });
+
+      render();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,129 @@
+/* Auth form styles */
+.auth-container {
+    max-width: 450px;
+    margin: 0 auto;
+    padding: var(--space-6);
+}
+
+.auth-container h2 {
+    text-align: center;
+    color: var(--primary);
+    margin-bottom: var(--space-6);
+    font-size: 2rem;
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.form-group label {
+    font-weight: 600;
+    color: var(--text);
+    font-size: 0.95rem;
+}
+
+.form-group input {
+    padding: var(--space-3) var(--space-4);
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-50);
+}
+
+.form-group input:invalid:not(:placeholder-shown) {
+    border-color: #ef4444;
+}
+
+.btn-primary {
+    padding: var(--space-3) var(--space-5);
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.05s ease;
+    margin-top: var(--space-2);
+}
+
+.btn-primary:hover {
+    background: var(--primary-600);
+}
+
+.btn-primary:active {
+    transform: translateY(1px);
+}
+
+.btn-primary:focus-visible {
+    outline: 3px solid var(--primary-50);
+    outline-offset: 2px;
+}
+
+.error-message {
+    color: #ef4444;
+    font-size: 0.9rem;
+    padding: var(--space-2);
+    background: #fee2e2;
+    border-radius: 6px;
+    display: none;
+}
+
+.error-message.show {
+    display: block;
+}
+
+.success-message {
+    color: #10b981;
+    font-size: 0.9rem;
+    padding: var(--space-2);
+    background: #d1fae5;
+    border-radius: 6px;
+    display: none;
+}
+
+.success-message.show {
+    display: block;
+}
+
+.auth-link {
+    text-align: center;
+    margin-top: var(--space-4);
+    color: var(--muted);
+}
+
+.auth-link a {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.auth-link a:hover {
+    text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .auth-container {
+        padding: var(--space-4);
+    }
+    
+    .auth-container h2 {
+        font-size: 1.5rem;
+    }
+}

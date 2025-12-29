@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="bs">
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+  <meta charset="utf-8" />
+  <title>BINGO</title>
+  <style>
+    :root{
+      --surface:#ffffff; --text:#1f2937; --muted:#6b7280;
+      --primary:#c30f10; --primary-600:#a30d0e; --border:#e5e7eb;
+      --shadow:0 8px 24px rgba(16,24,40,.08); --radius:14px;
+    }
+    *{ box-sizing: border-box; }
+    body{ margin:0; padding:24px; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color:var(--text); background:transparent; }
+    .wrap{ width:min(900px, 95vw); margin:0 auto; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:24px 24px 14px; }
+    h1{ text-align:center; margin:0 0 8px; letter-spacing:.5px; color:var(--primary-600); }
+    .subtitle{ text-align:center; margin:0 0 16px; color:var(--muted); font-size:14px; }
+    .table-wrap{ border:1px solid var(--border); border-radius:10px; overflow:hidden; background:#fff; }
+    table{ width:100%; border-collapse:collapse; table-layout:fixed; }
+    td{ border-bottom:1px solid var(--border); border-right:1px solid var(--border); vertical-align:middle; padding:14px; text-align:center; font-size:15px; cursor:pointer; position:relative; transition: background-color .15s ease, color .15s ease; }
+    tr:last-child td{ border-bottom:none; }
+    td:last-child{ border-right:none; }
+    td:hover{ background:#f9fafb; }
+    td.signed{ background:var(--primary); color:#fff; }
+    td .initials{ position:absolute; right:8px; bottom:6px; font-size:12px; opacity:.95; background:rgba(255,255,255,.15); padding:2px 6px; border-radius:999px; }
+    td.win{ outline:3px solid #16a34a; outline-offset:-3px; }
+    .notes{ margin:16px 0 12px; font-size:14px; line-height:1.65; color:var(--muted); }
+    .btn-row{ margin:12px 0 0; display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+    .btn{ background:var(--primary); color:#fff; border:none; padding:10px 18px; border-radius:10px; cursor:pointer; font-weight:700; }
+    .btn:hover{ background:var(--primary-600); }
+    .btn:focus-visible{ outline:3px solid #ffe4e6; outline-offset:2px; }
+    .msg{ text-align:center; color:#16a34a; font-weight:700; margin:12px 0; min-height:22px; }
+    /* Edit mode styles */
+    .edit-mode .table-wrap{ box-shadow:0 0 0 4px #ffe4e6 inset; }
+    .edit-mode td{ cursor:text; background:#fff; color:var(--text); }
+    .edit-mode td:hover{ background:#fff; }
+    td .content{ display:inline; }
+    @media (max-width: 520px){ td{ padding:10px; font-size:13px; } }
+    @media print{
+      body{ padding:0; }
+      .wrap{ box-shadow:none; border:none; }
+      .btn-row, .subtitle{ display:none; }
+      td.win{ outline:2px solid #16a34a; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>BINGO</h1>
+    <p class="subtitle">Klikni ćeliju da upišeš inicijale. Ista osoba može potpisati najviše 2 puta.</p>
+    <div class="table-wrap">
+    <table>
+      <tr>
+        <td>Putovao je van zemlje.</td>
+        <td>Letio je avionom. </td>
+        <td>Ima više od troje braće i sestara</td>
+        <td>Ima pet kućnih ljubimaca</td>
+        <td>Voli jesti kisele krastavce</td>
+      </tr>
+      <tr>
+        <td>Igra košarku</td>
+        <td>Voli Disney-eve crtane filmove</td>
+        <td>Voli crtati</td>
+        <td>Voli HTML</td>
+        <td>Zna roniti</td>
+      </tr>
+      <tr>
+        <td>Omiljena boja je narandžasta</td>
+        <td>Ne voli plažu</td>
+        <td>SLOBODAN PROSTOR</td>
+        <td>Dobar je u matematici</td>
+        <td>Nema kućne ljubimce</td>
+      </tr>
+      <tr>
+        <td>Ne voli čokoladu</td>
+        <td>Boji se pauka</td>
+        <td>Voli peći kolače</td>
+        <td>Svira instrument </td>
+        <td>Alergičan je na mačke ili pse</td>
+      </tr>
+      <tr>
+        <td>Slavi rođendan u oktobru</td>
+        <td>Voli jesti sir</td>
+        <td>Igra online igre</td>
+        <td>Ne voli pizzu</td>
+        <td>Voli pjevati</td>
+      </tr>
+    </table>
+    </div>
+
+    <div class="notes">
+      <p>Skupi 5 potpisa zaredom – BINGO!</p>
+      <p>Svaka osoba može staviti inicijale na vaš papir samo dva puta.</p>
+    </div>
+
+    <div class="msg" id="bingoMsg"></div>
+    <div class="btn-row">
+      <button class="btn" id="editBtn">Uredi sadržaj</button>
+      <button class="btn" id="resetBtn">Resetuj tablu</button>
+      <button class="btn" onclick="window.print()">Preuzmi kao PDF</button>
+      <button class="btn" id="restoreBtn">Vrati početni sadržaj</button>
+    </div>
+  </div>
+  <script>
+    (function(){
+      const table = document.querySelector('table');
+      const rows = Array.from(table.querySelectorAll('tr'));
+      const msg = document.getElementById('bingoMsg');
+      const resetBtn = document.getElementById('resetBtn');
+      const editBtn = document.getElementById('editBtn');
+      const restoreBtn = document.getElementById('restoreBtn');
+      const size = 5;
+      const counts = {}; // inicijali -> broj potpisa (max 2)
+      const STORAGE_KEY = 'bingoCellsV1';
+      const defaults = [];
+
+      // dodijeli koordinate i handler
+      rows.forEach((tr, r)=>{
+        Array.from(tr.children).forEach((td, c)=>{
+          td.dataset.r = r; td.dataset.c = c;
+          ensureContentSpan(td);
+          defaults.push(getContent(td));
+          td.addEventListener('click', ()=> toggleCell(td));
+        });
+      });
+
+      // učitaj sačuvani sadržaj ako postoji
+      loadContent();
+
+      function toggleCell(td){
+        if(document.body.classList.contains('edit-mode')) return; // ne potpisuj u edit režimu
+        if(!td.classList.contains('signed')){
+          const entered = prompt('Unesite inicijale (1-3 slova):');
+          if(entered === null) return; // odustanak
+          const key = (entered || '').trim().toUpperCase().slice(0,3);
+          if(!key){ return; }
+          if((counts[key] || 0) >= 2){
+            alert('Ta osoba je već potpisala dva puta.');
+            return;
+          }
+          td.classList.add('signed');
+          td.dataset.initials = key;
+          counts[key] = (counts[key] || 0) + 1;
+          let span = document.createElement('span');
+          span.className = 'initials';
+          span.textContent = key;
+          td.appendChild(span);
+        } else {
+          // ukloni potpis
+          const key = td.dataset.initials;
+          if(key && counts[key]) counts[key] -= 1;
+          td.classList.remove('signed');
+          td.removeAttribute('data-initials');
+          const s = td.querySelector('.initials'); if(s) s.remove();
+        }
+        clearWin();
+        checkBingo();
+      }
+
+      function clearWin(){
+        table.querySelectorAll('td.win').forEach(td=> td.classList.remove('win'));
+        msg.textContent = '';
+      }
+
+      function checkBingo(){
+        const grid = Array.from({length:size}, (_,r)=> Array.from(rows[r].children).map(td=> td.classList.contains('signed')));
+        // rows
+        for(let r=0;r<size;r++){
+          if(grid[r].every(Boolean)) return highlightLine(Array.from(rows[r].children));
+        }
+        // cols
+        for(let c=0;c<size;c++){
+          const col = rows.map(tr=> tr.children[c]);
+          if(col.every(td=> td.classList.contains('signed'))) return highlightLine(col);
+        }
+        // diag main
+        const main = rows.map((tr,i)=> tr.children[i]);
+        if(main.every(td=> td.classList.contains('signed'))) return highlightLine(main);
+        // diag anti
+        const anti = rows.map((tr,i)=> tr.children[size-1-i]);
+        if(anti.every(td=> td.classList.contains('signed'))) return highlightLine(anti);
+      }
+
+      function highlightLine(list){
+        list.forEach(td=> td.classList.add('win'));
+        msg.textContent = 'BINGO! Čestitamo!';
+      }
+
+      resetBtn.addEventListener('click', ()=>{
+        Object.keys(counts).forEach(k=> counts[k]=0);
+        table.querySelectorAll('td').forEach(td=>{
+          td.classList.remove('signed','win');
+          td.removeAttribute('data-initials');
+          const s = td.querySelector('.initials'); if(s) s.remove();
+        });
+        msg.textContent = '';
+      });
+
+      // Edit režim toggling
+      editBtn.addEventListener('click', ()=>{
+        const editing = document.body.classList.toggle('edit-mode');
+        const label = editing ? 'Završi uređivanje' : 'Uredi sadržaj';
+        editBtn.textContent = label;
+        table.querySelectorAll('td .content').forEach(span=>{
+          span.setAttribute('contenteditable', editing ? 'true' : 'false');
+        });
+        if(!editing){
+          saveContent();
+          showTemp('Sadržaj sačuvan.');
+        }
+      });
+
+      // Vrati početni sadržaj
+      restoreBtn.addEventListener('click', ()=>{
+        localStorage.removeItem(STORAGE_KEY);
+        const cells = table.querySelectorAll('td');
+        defaults.forEach((text, i)=> setContent(cells[i], text));
+        showTemp('Vraćen početni sadržaj.');
+      });
+
+      function ensureContentSpan(td){
+        if(!td.querySelector('.content')){
+          const text = td.textContent.trim();
+          td.innerHTML = '<span class="content"></span>';
+          td.querySelector('.content').textContent = text;
+        }
+      }
+      function getContent(td){
+        const c = td.querySelector('.content');
+        return c ? c.textContent : td.textContent;
+      }
+      function setContent(td, text){
+        ensureContentSpan(td);
+        td.querySelector('.content').textContent = text;
+      }
+
+      function saveContent(){
+        const cells = Array.from(table.querySelectorAll('td'));
+        const data = cells.map(td=> getContent(td));
+        try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }catch(e){}
+      }
+      function loadContent(){
+        try{
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if(!raw) return;
+          const data = JSON.parse(raw);
+          if(Array.isArray(data) && data.length === size*size){
+            const cells = table.querySelectorAll('td');
+            data.forEach((text, i)=> setContent(cells[i], text));
+          }
+        }catch(e){}
+      }
+
+      function showTemp(text){
+        const prev = msg.textContent;
+        msg.textContent = text;
+        setTimeout(()=>{ if(msg.textContent === text) msg.textContent = prev; }, 1600);
+      }
+    })();
+  </script>
+</body>
+</html>

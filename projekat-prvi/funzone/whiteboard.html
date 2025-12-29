@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+  <meta charset="utf-8" />
+  <title>Interaktivni Whiteboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --primary:#207cf5; --primary-600:#1864c9; --primary-50:#e8f1ff;
+      --bg:#f6f7fb; --surface:#ffffff; --border:#e5e7eb; --shadow:0 8px 24px rgba(16,24,40,.08);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:linear-gradient(180deg,#f0f4ff, #f6f7fb); color:#1f2937; overflow:hidden}
+    .wrap{width:min(1100px,92vw); margin:24px auto;}
+    h1{margin:0 0 14px; color:#0f172a; font-size:clamp(1.4rem,1.1rem + 1vw,2rem)}
+    .toolbar{
+      display:flex; align-items:center; gap:10px; padding:10px 14px; background:#fff; border:1px solid var(--border);
+      border-radius:12px; box-shadow:var(--shadow); position:relative; z-index:2;
+    }
+    .toolbar label{font-weight:600; color:#334155; margin-right:6px}
+    .toolbar input[type=color]{
+      appearance:none; -webkit-appearance:none; border:2px solid #e5e7eb; width:56px; height:28px; padding:0; border-radius:6px; cursor:pointer;
+    }
+    .toolbar input[type=range]{ width:160px }
+    .btn{background:var(--primary); color:#fff; border:none; padding:8px 14px; border-radius:10px; font-weight:700; cursor:pointer}
+    .btn:hover{ background:var(--primary-600)}
+    .board{
+      margin-top:14px; background:#fff; border-radius:16px; border:1px solid var(--border); box-shadow:var(--shadow);
+      padding:10px; height:auto
+    }
+    canvas{ display:block; width:100%; height:520px; background:#fff; border-radius:12px }
+    footer{ text-align:center; color:#6b7280; margin-top:8px; font-size:.95rem }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>✏️ Interaktivni Whiteboard</h1>
+    <div class="toolbar" aria-label="Alatna traka">
+      <label>Boja:</label>
+      <input id="color" type="color" value="#207cf5" />
+      <label>Četka:</label>
+      <input id="size" type="range" min="1" max="50" value="6" />
+      <button class="btn" id="erase">Briši</button>
+      <button class="btn" id="clear">Čista ploča</button>
+      <button class="btn" id="save">Snimi</button>
+    </div>
+    <div class="board"><canvas id="c"></canvas></div>
+    <footer>Web programiranje 2025 © Internacionalna poslovno-informaciona akademija Tuzla</footer>
+  </div>
+  <script>
+    (function(){
+      const canvas = document.getElementById('c');
+      const ctx = canvas.getContext('2d');
+      const color = document.getElementById('color');
+      const size = document.getElementById('size');
+      const erase = document.getElementById('erase');
+      const clearBtn = document.getElementById('clear');
+      const saveBtn = document.getElementById('save');
+
+      function fitCanvas(){
+        const rect = canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        // Reset transform before resizing to avoid compound scales
+        ctx.setTransform(1,0,0,1,0,0);
+        canvas.width = Math.round(rect.width * dpr);
+        canvas.height = Math.round(520 * dpr);
+        ctx.setTransform(dpr,0,0,dpr,0,0);
+      }
+      fitCanvas();
+      window.addEventListener('resize', function(){
+        clearTimeout(window.__wb_r);
+        window.__wb_r = setTimeout(fitCanvas, 120);
+      });
+
+      let drawing = false, lastX=0, lastY=0, erasing=false;
+      function start(e){
+        drawing = true; const p = point(e); lastX=p.x; lastY=p.y; draw(e);
+      }
+      function stop(){ drawing=false; ctx.beginPath(); }
+      function point(e){
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.touches? e.touches[0].clientX : e.clientX) - rect.left;
+        const y = (e.touches? e.touches[0].clientY : e.clientY) - rect.top;
+        return {x,y};
+      }
+      function draw(e){
+        if(!drawing) return;
+        const p = point(e); ctx.lineCap='round'; ctx.lineJoin='round';
+        ctx.lineWidth = +size.value; ctx.strokeStyle = erasing ? '#fff' : color.value;
+        ctx.beginPath(); ctx.moveTo(lastX,lastY); ctx.lineTo(p.x,p.y); ctx.stroke(); lastX=p.x; lastY=p.y;
+        e.preventDefault();
+      }
+      canvas.addEventListener('mousedown', start);
+      canvas.addEventListener('mousemove', draw);
+      window.addEventListener('mouseup', stop);
+      canvas.addEventListener('touchstart', start, {passive:false});
+      canvas.addEventListener('touchmove', draw, {passive:false});
+      window.addEventListener('touchend', stop);
+
+      erase.addEventListener('click',()=>{ erasing=!erasing; erase.textContent = erasing? 'Piši' : 'Briši'; });
+      clearBtn.addEventListener('click',()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); fitCanvas(); });
+      saveBtn.addEventListener('click',()=>{
+        const link = document.createElement('a');
+        // Export at displayed resolution
+        link.href = canvas.toDataURL('image/png');
+        link.download = 'whiteboard.png';
+        document.body.appendChild(link); link.click(); link.remove();
+      });
+    })();
+  </script>
+</body>
+</html>
