@@ -1,0 +1,154 @@
+<div class="calendar-container">
+  <div class="page-header">
+    <h1>📅 Kalendar</h1>
+    <p>Organizirajte svoje zadatke i događaje</p>
+  </div>
+
+  <div class="calendar-layout">
+    <!-- Calendar View -->
+    <div class="calendar-section">
+      <div class="calendar-header">
+        <button class="nav-btn" (click)="previousMonth()">‹</button>
+        <h2>{{ monthNames[currentDate.getMonth()] }} {{ currentDate.getFullYear() }}</h2>
+        <button class="nav-btn" (click)="nextMonth()">›</button>
+      </div>
+
+      <div class="calendar-grid">
+        <!-- Day names -->
+        <div class="day-name" *ngFor="let day of dayNames">{{ day }}</div>
+        
+        <!-- Calendar days -->
+        <div 
+          class="calendar-day" 
+          *ngFor="let date of calendarDays"
+          [class.other-month]="!isCurrentMonth(date)"
+          [class.today]="isToday(date)"
+          [class.selected]="isSelected(date)"
+          [class.has-events]="hasEvents(date)"
+          (click)="selectDate(date)">
+          <span class="day-number">{{ date.getDate() }}</span>
+          <div class="event-dots" *ngIf="hasEvents(date)">
+            <span class="dot" *ngFor="let event of getEventsForDate(date).slice(0, 3)"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Events List -->
+    <div class="events-section">
+      <div class="events-header">
+        <h3>
+          Događaji za 
+          <span *ngIf="selectedDate">{{ selectedDate.toLocaleDateString('bs-BA') }}</span>
+        </h3>
+        <button class="btn-add" (click)="openEventForm()">+ Dodaj događaj</button>
+      </div>
+
+      <div class="events-list" *ngIf="filteredEvents.length > 0">
+        <div 
+          class="event-item" 
+          *ngFor="let event of filteredEvents"
+          [class.completed]="event.completed"
+          [class.type-task]="event.type === 'task'"
+          [class.type-exam]="event.type === 'exam'"
+          [class.type-class]="event.type === 'class'">
+          
+          <div class="event-icon">{{ getEventIcon(event.type) }}</div>
+          <div class="event-content">
+            <h4>{{ event.title }}</h4>
+            <p *ngIf="event.description">{{ event.description }}</p>
+            <div class="event-meta">
+              <span class="event-time">⏰ {{ formatTime(event.date) }}</span>
+              <span class="event-type-badge">{{ getEventTypeLabel(event.type) }}</span>
+            </div>
+          </div>
+          <div class="event-actions">
+            <button 
+              class="action-btn" 
+              [class.completed]="event.completed"
+              (click)="toggleEventCompleted(event.id)"
+              [title]="event.completed ? 'Označi kao nezavršeno' : 'Označi kao završeno'">
+              {{ event.completed ? '✓' : '○' }}
+            </button>
+            <button 
+              class="action-btn delete" 
+              (click)="deleteEvent(event.id)"
+              title="Obriši">
+              🗑️
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="empty-state" *ngIf="filteredEvents.length === 0">
+        <span class="empty-icon">📅</span>
+        <p>Nemate događaja za ovaj dan</p>
+        <button class="btn-secondary" (click)="openEventForm()">Dodajte novi</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Event Form Modal -->
+  <div class="modal-overlay" *ngIf="showEventForm" (click)="closeEventForm()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Dodaj novi događaj</h3>
+        <button class="close-btn" (click)="closeEventForm()">✕</button>
+      </div>
+
+      <form class="event-form" (submit)="$event.preventDefault(); addEvent()">
+        <div class="form-group">
+          <label>Naslov *</label>
+          <input 
+            type="text" 
+            [(ngModel)]="newEvent.title" 
+            name="title"
+            placeholder="Npr. Ispit iz matematike"
+            required>
+        </div>
+
+        <div class="form-group">
+          <label>Opis</label>
+          <textarea 
+            [(ngModel)]="newEvent.description" 
+            name="description"
+            placeholder="Dodatne informacije..."
+            rows="3"></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Datum *</label>
+            <input 
+              type="date" 
+              [(ngModel)]="newEvent.date" 
+              name="date"
+              required>
+          </div>
+          <div class="form-group">
+            <label>Vrijeme</label>
+            <input 
+              type="time" 
+              [(ngModel)]="newEvent.time" 
+              name="time">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Tip</label>
+          <select [(ngModel)]="newEvent.type" name="type">
+            <option value="task">Zadatak</option>
+            <option value="exam">Ispit</option>
+            <option value="class">Čas</option>
+            <option value="other">Ostalo</option>
+          </select>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn-cancel" (click)="closeEventForm()">Otkaži</button>
+          <button type="submit" class="btn-submit">Dodaj događaj</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

@@ -2,6 +2,7 @@ import { Component, PLATFORM_ID, Inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-login',
@@ -16,7 +17,8 @@ export class Login {
 
   constructor(
     private router: Router,
-    @Inject(PLATFORM_ID) private platformId: Object
+    @Inject(PLATFORM_ID) private platformId: Object,
+    private authService: AuthService
   ) {}
 
   onSubmit() {
@@ -42,9 +44,16 @@ export class Login {
       loginTime: new Date().toISOString()
     };
 
-    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+    // Use AuthService to handle login
+    this.authService.login(currentUser);
+    
+    // Set flag for fresh login
+    sessionStorage.setItem('justLoggedIn', 'true');
+    
+    console.log('User logged in via Angular:', currentUser);
+    
+    // Navigate to home, header will redirect to profile
     this.router.navigate(['/']);
-    window.location.reload();
   }
 
   private getUsers(): any[] {

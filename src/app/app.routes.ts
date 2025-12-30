@@ -4,26 +4,30 @@ import { Popis } from './pages/popis/popis';
 import { Raspored } from './pages/raspored/raspored';
 import { Kontakt } from './pages/kontakt/kontakt';
 import { StudentFunZone } from './pages/student-fun-zone/student-fun-zone';
-import { Login } from './pages/login/login';
-import { Register } from './pages/register/register';
 import { Bingo } from './pages/student-fun-zone/games/bingo';
 import { Kviz } from './pages/student-fun-zone/games/kviz';
 import { Whiteboard } from './pages/student-fun-zone/games/whiteboard';
 import { VisualBoard } from './pages/student-fun-zone/games/visual-board';
 import { Kanban } from './pages/student-fun-zone/games/kanban';
+import { Trackers } from './pages/trackers/trackers';
+import { ViewProfile } from './pages/view-profile/view-profile';
+import { StatistikaComponent } from './pages/statistika/statistika';
+import { CalendarComponent } from './pages/calendar/calendar';
 
 export const routes: Routes = [
   { path: '', component: Home },
   { path: 'popis', component: Popis },
   { path: 'raspored', component: Raspored },
   { path: 'kontakt', component: Kontakt },
+  { path: 'statistika', component: StatistikaComponent },
+  { path: 'calendar', component: CalendarComponent },
   { path: 'student-fun-zone', component: StudentFunZone },
   { path: 'student-fun-zone/bingo', component: Bingo },
   { path: 'student-fun-zone/kviz', component: Kviz },
   { path: 'student-fun-zone/whiteboard', component: Whiteboard },
   { path: 'student-fun-zone/visual', component: VisualBoard },
   { path: 'student-fun-zone/kanban', component: Kanban },
-  { path: 'login', component: Login },
-  { path: 'register', component: Register },
+  { path: 'trackers', component: Trackers },
+  { path: 'view-profile', component: ViewProfile },
   { path: '**', redirectTo: '' }
 ];

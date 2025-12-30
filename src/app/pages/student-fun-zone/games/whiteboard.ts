@@ -1,6 +1,6 @@
-import { Component, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
+import { Component, ElementRef, ViewChild, AfterViewInit, PLATFORM_ID, Inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { CommonModule } from '@angular/common';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 @Component({
@@ -22,14 +22,20 @@ export class Whiteboard implements AfterViewInit {
   erasing = false;
   eraseBtnText = 'Briši';
 
+  constructor(@Inject(PLATFORM_ID) private platformId: Object) {}
+
   ngAfterViewInit() {
-    const canvas = this.canvasRef.nativeElement;
-    this.ctx = canvas.getContext('2d')!;
-    this.fitCanvas();
-    window.addEventListener('resize', () => this.fitCanvas());
+    if (isPlatformBrowser(this.platformId)) {
+      const canvas = this.canvasRef.nativeElement;
+      this.ctx = canvas.getContext('2d')!;
+      this.fitCanvas();
+      window.addEventListener('resize', () => this.fitCanvas());
+    }
   }
 
   fitCanvas() {
+    if (!isPlatformBrowser(this.platformId)) return;
+    
     const canvas = this.canvasRef.nativeElement;
     const rect = canvas.parentElement!.getBoundingClientRect();
     canvas.width = rect.width;
@@ -41,6 +47,8 @@ export class Whiteboard implements AfterViewInit {
   }
 
   getPoint(e: MouseEvent | TouchEvent): {x: number, y: number} {
+    if (!isPlatformBrowser(this.platformId)) return {x: 0, y: 0};
+    
     const canvas = this.canvasRef.nativeElement;
     const rect = canvas.getBoundingClientRect();
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
@@ -52,6 +60,8 @@ export class Whiteboard implements AfterViewInit {
   }
 
   onStart(e: MouseEvent | TouchEvent) {
+    if (!isPlatformBrowser(this.platformId)) return;
+    
     this.drawing = true;
     const p = this.getPoint(e);
     this.lastX = p.x;
@@ -60,7 +70,8 @@ export class Whiteboard implements AfterViewInit {
   }
 
   onMove(e: MouseEvent | TouchEvent) {
-    if (!this.drawing) return;
+    if (!isPlatformBrowser(this.platformId) || !this.drawing) return;
+    
     const p = this.getPoint(e);
     this.ctx.lineWidth = this.size;
     this.ctx.strokeStyle = this.erasing ? '#fff' : this.color;
@@ -83,12 +94,16 @@ export class Whiteboard implements AfterViewInit {
   }
 
   clear() {
+    if (!isPlatformBrowser(this.platformId)) return;
+    
     const canvas = this.canvasRef.nativeElement;
     this.ctx.clearRect(0, 0, canvas.width, canvas.height);
     this.fitCanvas();
   }
 
   save() {
+    if (!isPlatformBrowser(this.platformId)) return;
+    
     const canvas = this.canvasRef.nativeElement;
     const link = document.createElement('a');
     link.href = canvas.toDataURL('image/png');

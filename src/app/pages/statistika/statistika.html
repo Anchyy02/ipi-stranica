@@ -1,0 +1,178 @@
+<div class="statistika-container">
+  <div class="page-header">
+    <h1>📊 Statistika i Produktivnost</h1>
+    <p>Analizirajte svoje navike i pratite napredak</p>
+    <button class="btn-export" (click)="exportToPDF()">
+      📄 Export u PDF
+    </button>
+  </div>
+
+  <!-- Filter -->
+  <div class="filter-section">
+    <div class="filter-group">
+      <label>Period:</label>
+      <select [(ngModel)]="filterPeriod" (change)="onFilterChange()">
+        <option value="week">Sedmica</option>
+        <option value="month">Mjesec</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Datum:</label>
+      <input type="date" [(ngModel)]="selectedDate" (change)="onFilterChange()">
+    </div>
+  </div>
+
+  <!-- Stats Overview -->
+  <div class="stats-overview">
+    <div class="stat-card">
+      <div class="stat-icon">😴</div>
+      <div class="stat-value">{{ stats.avgSleep }}h</div>
+      <div class="stat-label">Prosječno spavanje</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">📚</div>
+      <div class="stat-value">{{ stats.avgStudy }}h</div>
+      <div class="stat-label">Prosječno učenje</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">⏱️</div>
+      <div class="stat-value">{{ stats.totalStudyTime }}h</div>
+      <div class="stat-label">Ukupno sati učenja</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🎯</div>
+      <div class="stat-value">{{ stats.productivityScore }}%</div>
+      <div class="stat-label">Skor produktivnosti</div>
+    </div>
+  </div>
+
+  <!-- Charts Section -->
+  <div class="charts-grid">
+    <!-- Sleep Chart (Bar Chart) -->
+    <div class="chart-card">
+      <h3>😴 Sati spavanja</h3>
+      <div class="chart-container">
+        <div class="bar-chart">
+          <div class="bar-group" *ngFor="let label of sleepData.labels; let i = index">
+            <div class="bar-wrapper">
+              <div class="bar" 
+                   [style.height]="getBarHeight(sleepData.data[i], 10)"
+                   [title]="sleepData.data[i] + 'h'">
+              </div>
+              <span class="bar-value">{{ sleepData.data[i] }}h</span>
+            </div>
+            <span class="bar-label">{{ label }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Study Time Chart (Line Chart) -->
+    <div class="chart-card">
+      <h3>📚 Vrijeme učenja</h3>
+      <div class="chart-container">
+        <svg class="line-chart" viewBox="0 0 600 250" preserveAspectRatio="xMidYMid meet">
+          <!-- Grid lines -->
+          <line *ngFor="let i of [0, 1, 2, 3, 4]" 
+                [attr.x1]="0" 
+                [attr.y1]="50 * i" 
+                [attr.x2]="600" 
+                [attr.y2]="50 * i" 
+                stroke="#e5e7eb" 
+                stroke-width="1"/>
+          
+          <!-- Line -->
+          <polyline 
+            [attr.points]="getLinePoints()"
+            fill="none"
+            stroke="#207cf5"
+            stroke-width="3"
+            stroke-linecap="round"
+            stroke-linejoin="round"/>
+          
+          <!-- Points -->
+          <circle *ngFor="let value of studyData.data; let i = index"
+                  [attr.cx]="i * (600 / (studyData.data.length - 1))"
+                  [attr.cy]="200 - (value / 10 * 200)"
+                  r="5"
+                  fill="#207cf5"/>
+          
+          <!-- Labels -->
+          <text *ngFor="let label of studyData.labels; let i = index"
+                [attr.x]="i * (600 / (studyData.labels.length - 1))"
+                y="240"
+                text-anchor="middle"
+                font-size="14"
+                fill="#6b7280">
+            {{ label }}
+          </text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Activity Distribution (Pie Chart) -->
+    <div class="chart-card">
+      <h3>⏰ Raspodjela aktivnosti</h3>
+      <div class="chart-container pie-container">
+        <svg class="pie-chart" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="40" fill="none" stroke="#f3f4f6" stroke-width="20"/>
+          <g *ngFor="let slice of getPieSlices()">
+            <path [attr.d]="slice.path" [attr.fill]="slice.color"/>
+          </g>
+        </svg>
+        <div class="pie-legend">
+          <div class="legend-item" *ngFor="let slice of getPieSlices()">
+            <span class="legend-color" [style.background-color]="slice.color"></span>
+            <span class="legend-label">{{ slice.label }} ({{ slice.percentage }}%)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comparison Chart -->
+    <div class="chart-card comparison-card">
+      <h3>📈 Poređenje napredka</h3>
+      <div class="comparison-container">
+        <div class="comparison-row">
+          <span class="comparison-label">Ova sedmica:</span>
+          <div class="progress-bar">
+            <div class="progress-fill" [style.width]="'75%'"></div>
+          </div>
+          <span class="comparison-value">75%</span>
+        </div>
+        <div class="comparison-row">
+          <span class="comparison-label">Prošla sedmica:</span>
+          <div class="progress-bar">
+            <div class="progress-fill gray" [style.width]="'65%'"></div>
+          </div>
+          <span class="comparison-value">65%</span>
+        </div>
+        <div class="comparison-improvement">
+          <span class="improvement-badge positive">↑ +10% poboljšanje</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Insights Section -->
+  <div class="insights-section">
+    <h2>🤖 AI Uvidi</h2>
+    <div class="insights-grid">
+      <div class="insight-card">
+        <div class="insight-icon">💡</div>
+        <h4>Preporuka za spavanje</h4>
+        <p>{{ getAISleepInsight() }}</p>
+      </div>
+      <div class="insight-card">
+        <div class="insight-icon">📖</div>
+        <h4>Učenje</h4>
+        <p>{{ getAIStudyInsight() }}</p>
+      </div>
+      <div class="insight-card">
+        <div class="insight-icon">🎯</div>
+        <h4>Produktivnost</h4>
+        <p>{{ getAIProductivityInsight() }}</p>
+      </div>
+    </div>
+  </div>
+</div>

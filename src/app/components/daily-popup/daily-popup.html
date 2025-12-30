@@ -1,0 +1,81 @@
+<div class="daily-popup-overlay" *ngIf="showPopup" (click)="closePopup()">
+  <div class="daily-popup-content" (click)="$event.stopPropagation()">
+    <button class="close-btn" (click)="closePopup()">✕</button>
+    
+    <div class="popup-header">
+      <h2>📊 Vaša Dnevna Analiza</h2>
+      <p class="date">{{ getCurrentDate() }}</p>
+    </div>
+
+    <div class="score-circle" [class]="getScoreClass()" *ngIf="analysis">
+      <svg viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="45" class="bg-circle"></circle>
+        <circle 
+          cx="50" 
+          cy="50" 
+          r="45" 
+          class="progress-circle"
+          [style.stroke-dasharray]="(analysis.score / 100 * 283) + ' 283'">
+        </circle>
+      </svg>
+      <div class="score-content">
+        <div class="score-number">{{ analysis.score }}</div>
+        <div class="score-label">Skor</div>
+      </div>
+    </div>
+
+    <div class="score-message" *ngIf="analysis">
+      {{ analysis.message }}
+    </div>
+
+    <!-- Metrics Overview -->
+    <div class="metrics-grid" *ngIf="metrics">
+      <div class="metric-card">
+        <div class="metric-icon">📚</div>
+        <div class="metric-value">{{ metrics.studyHours }}h</div>
+        <div class="metric-label">Učenje</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon">😴</div>
+        <div class="metric-value">{{ metrics.sleepHours }}h</div>
+        <div class="metric-label">Spavanje</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon">💧</div>
+        <div class="metric-value">{{ metrics.waterGlasses }}</div>
+        <div class="metric-label">Čaše vode</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon">✅</div>
+        <div class="metric-value">{{ metrics.tasksCompleted }}</div>
+        <div class="metric-label">Zadaci</div>
+      </div>
+    </div>
+
+    <!-- Mood -->
+    <div class="mood-section" *ngIf="metrics">
+      <p>Vaše raspoloženje danas:</p>
+      <div class="mood-emoji">{{ getMoodEmoji() }}</div>
+    </div>
+
+    <!-- Insights -->
+    <div class="insights-section" *ngIf="analysis && analysis.insights.length > 0">
+      <h3>💡 Uvidi</h3>
+      <ul class="insights-list">
+        <li *ngFor="let insight of analysis.insights">{{ insight }}</li>
+      </ul>
+    </div>
+
+    <!-- Recommendations -->
+    <div class="recommendations-section" *ngIf="analysis && analysis.recommendations.length > 0">
+      <h3>🎯 Preporuke</h3>
+      <ul class="recommendations-list">
+        <li *ngFor="let rec of analysis.recommendations">{{ rec }}</li>
+      </ul>
+    </div>
+
+    <div class="popup-footer">
+      <button class="btn-primary" (click)="closePopup()">Razumijem, hvala!</button>
+    </div>
+  </div>
+</div>

@@ -24,3 +24,25 @@
 nav a.active {
   background: var(--primary-600);
 }
+
+.theme-toggle {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.theme-toggle:hover {
+  transform: scale(1.2);
+}
+
+.theme-toggle span {
+  display: inline-block;
+  line-height: 1;
+}
+

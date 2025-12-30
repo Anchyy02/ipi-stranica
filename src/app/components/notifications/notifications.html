@@ -1,0 +1,169 @@
+<div class="notification-widget">
+  <!-- Bell Icon Button -->
+  <button class="notification-bell" (click)="togglePanel()" [class.has-unread]="unreadCount > 0">
+    <span class="bell-icon">🔔</span>
+    <span class="notification-badge" *ngIf="unreadCount > 0">{{ unreadCount }}</span>
+  </button>
+
+  <!-- Notification Panel -->
+  <div class="notification-panel" *ngIf="showNotificationPanel">
+    <div class="panel-header">
+      <h3>Notifikacije & Podsjetnici</h3>
+      <button class="close-btn" (click)="togglePanel()">✕</button>
+    </div>
+
+    <!-- Tabs -->
+    <div class="panel-tabs">
+      <button 
+        class="tab-btn" 
+        [class.active]="activeTab === 'notifications'"
+        (click)="switchTab('notifications')">
+        Notifikacije ({{ unreadCount }})
+      </button>
+      <button 
+        class="tab-btn" 
+        [class.active]="activeTab === 'reminders'"
+        (click)="switchTab('reminders')">
+        Podsjetnici ({{ reminders.length }})
+      </button>
+    </div>
+
+    <!-- Notifications Tab -->
+    <div class="tab-content" *ngIf="activeTab === 'notifications'">
+      <div class="tab-actions">
+        <button class="action-btn" (click)="markAllAsRead()" *ngIf="unreadCount > 0">
+          Označi sve pročitano
+        </button>
+        <button class="action-btn danger" (click)="clearAll()" *ngIf="notifications.length > 0">
+          Obriši sve
+        </button>
+      </div>
+
+      <div class="notifications-list" *ngIf="notifications.length > 0">
+        <div 
+          class="notification-item" 
+          *ngFor="let notification of notifications"
+          [class.unread]="!notification.read"
+          [class.type-success]="notification.type === 'success'"
+          [class.type-warning]="notification.type === 'warning'"
+          [class.type-error]="notification.type === 'error'">
+          
+          <div class="notification-icon">{{ getNotificationIcon(notification.type) }}</div>
+          <div class="notification-content">
+            <h4>{{ notification.title }}</h4>
+            <p>{{ notification.message }}</p>
+            <span class="notification-time">{{ formatTime(notification.timestamp) }}</span>
+          </div>
+          <div class="notification-actions">
+            <button 
+              class="icon-btn" 
+              (click)="markAsRead(notification.id)" 
+              *ngIf="!notification.read"
+              title="Označi pročitano">
+              ✓
+            </button>
+            <button 
+              class="icon-btn delete" 
+              (click)="deleteNotification(notification.id)"
+              title="Obriši">
+              🗑️
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="empty-state" *ngIf="notifications.length === 0">
+        <span class="empty-icon">📭</span>
+        <p>Nemate novih notifikacija</p>
+      </div>
+    </div>
+
+    <!-- Reminders Tab -->
+    <div class="tab-content" *ngIf="activeTab === 'reminders'">
+      <!-- Add Reminder Form -->
+      <div class="add-reminder-form">
+        <h4>Dodaj novi podsjetnik</h4>
+        <div class="form-row">
+          <input 
+            type="text" 
+            [(ngModel)]="newReminder.title" 
+            placeholder="Naslov"
+            class="form-input">
+        </div>
+        <div class="form-row">
+          <textarea 
+            [(ngModel)]="newReminder.message" 
+            placeholder="Poruka"
+            class="form-textarea"
+            rows="2"></textarea>
+        </div>
+        <div class="form-row form-row-split">
+          <input 
+            type="date" 
+            [(ngModel)]="newReminder.date" 
+            class="form-input">
+          <input 
+            type="time" 
+            [(ngModel)]="newReminder.time" 
+            class="form-input">
+        </div>
+        <div class="form-row">
+          <select [(ngModel)]="newReminder.recurring" class="form-select">
+            <option value="">Jednokratno</option>
+            <option value="daily">Dnevno</option>
+            <option value="weekly">Sedmično</option>
+            <option value="monthly">Mjesečno</option>
+          </select>
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" (click)="addReminder()">Dodaj podsjetnik</button>
+          <button class="btn-secondary" (click)="setupDefaultReminders()">
+            Setup default
+          </button>
+        </div>
+      </div>
+
+      <!-- Reminders List -->
+      <div class="reminders-list" *ngIf="reminders.length > 0">
+        <h4>Moji podsjetnici</h4>
+        <div 
+          class="reminder-item" 
+          *ngFor="let reminder of reminders"
+          [class.disabled]="!reminder.enabled">
+          
+          <div class="reminder-header">
+            <h5>{{ reminder.title }}</h5>
+            <div class="reminder-toggle">
+              <label class="switch">
+                <input 
+                  type="checkbox" 
+                  [checked]="reminder.enabled"
+                  (change)="toggleReminder(reminder.id)">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+          <p class="reminder-message">{{ reminder.message }}</p>
+          <div class="reminder-footer">
+            <span class="reminder-time">
+              ⏰ {{ formatReminderTime(reminder.time) }}
+            </span>
+            <span class="reminder-recurring" *ngIf="reminder.recurring">
+              🔄 {{ reminder.recurring }}
+            </span>
+            <button 
+              class="icon-btn delete" 
+              (click)="deleteReminder(reminder.id)">
+              🗑️
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="empty-state" *ngIf="reminders.length === 0">
+        <span class="empty-icon">⏰</span>
+        <p>Nemate postavljenih podsjetnika</p>
+      </div>
+    </div>
+  </div>
+</div>

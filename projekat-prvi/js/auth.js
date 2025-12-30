@@ -136,10 +136,21 @@ if (loginForm) {
         };
         
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        console.log('User logged in (projekat-prvi):', currentUser);
+        console.log('localStorage after login:', localStorage.getItem('currentUser'));
         
-        // Redirect to Angular app
-        // Assuming Angular app runs on localhost:4200
-        window.location.href = 'http://localhost:4200';
+        // Also set a flag to indicate fresh login
+        sessionStorage.setItem('justLoggedIn', 'true');
+        
+        showSuccess('Uspješno ste se prijavili! Preusmjeravam...');
+        
+        // Redirect to Angular app home page after successful login
+        setTimeout(() => {
+            // Use window.location.origin to ensure we stay on the same domain
+            const baseUrl = window.location.origin;
+            window.location.href = baseUrl + '/';
+            console.log('Redirecting to:', baseUrl + '/');
+        }, 1000);
     });
 }
 

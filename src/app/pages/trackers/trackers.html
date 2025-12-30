@@ -1,0 +1,222 @@
+<h2>📊 Personal Trackers</h2>
+<p>Odaberi tracker za praćenje svojih dnevnih navika:</p>
+
+<div class="tracker-grid">
+    <!-- Water Intake Tracker -->
+    <div class="tracker-card active" (click)="openTracker('water')">
+        <div class="tracker-icon">💧</div>
+        <h3>Water Intake</h3>
+        <p>Prati unos vode tokom dana</p>
+    </div>
+
+    <!-- Time Tracker -->
+    <div class="tracker-card active" (click)="openTracker('timer')">
+        <div class="tracker-icon">⏱️</div>
+        <h3>Time Tracker</h3>
+        <p>Prati vrijeme unesenih zadataka</p>
+    </div>
+
+    <!-- Placeholder Cards -->
+    <div class="tracker-card placeholder">
+        <div class="tracker-icon">🏃</div>
+        <h3>Exercise Tracker</h3>
+        <p>Uskoro...</p>
+    </div>
+
+    <div class="tracker-card placeholder">
+        <div class="tracker-icon">😴</div>
+        <h3>Sleep Tracker</h3>
+        <p>Uskoro...</p>
+    </div>
+
+    <div class="tracker-card placeholder">
+        <div class="tracker-icon">📚</div>
+        <h3>Study Hours</h3>
+        <p>Uskoro...</p>
+    </div>
+
+    <div class="tracker-card placeholder">
+        <div class="tracker-icon">🍎</div>
+        <h3>Meal Tracker</h3>
+        <p>Uskoro...</p>
+    </div>
+</div>
+
+<!-- Water Tracker Modal -->
+<div class="tracker-modal" [class.show]="showWaterModal" (click)="onModalClick($event)">
+    <div class="tracker-modal-content">
+        <span class="close-modal" (click)="closeTracker()">&times;</span>
+        <h2>💧 Water Intake Tracker</h2>
+        <p>Koliko čaša vode si popio danas?</p>
+
+        <div class="water-input-section">
+            <div class="today-section">
+                <h3>Danas: <span>{{todayDate}}</span></h3>
+                <div class="glass-counter">
+                    <button class="btn-counter" (click)="decreaseGlasses()">-</button>
+                    <div class="glass-display">
+                        <span class="glass-count">{{todayGlasses}}</span>
+                        <span class="glass-label">čaša</span>
+                    </div>
+                    <button class="btn-counter" (click)="increaseGlasses()">+</button>
+                </div>
+                <p class="water-goal">Cilj: 8 čaša dnevno</p>
+            </div>
+        </div>
+
+        <div class="contribution-graph">
+            <h3>Unos vode u poslednjih 12 nedelja</h3>
+            <div class="graph-container">
+                <div class="month-labels">
+                    <span *ngFor="let label of monthLabels" [style.grid-column]="(label.position + 1)">
+                        {{label.text}}
+                    </span>
+                </div>
+                <div class="graph-grid">
+                    <div class="day-labels">
+                        <span>Pon</span>
+                        <span>Sri</span>
+                        <span>Pet</span>
+                    </div>
+                    <div class="graph-cells">
+                        <div *ngFor="let cell of graphCells" 
+                             class="graph-cell level-{{cell.level}}"
+                             [title]="cell.date + ': ' + cell.glasses + ' čaša'"
+                             (click)="editDay(cell.date, cell.glasses)">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="legend">
+                <span>Manje</span>
+                <div class="legend-colors">
+                    <span class="legend-cell level-0"></span>
+                    <span class="legend-cell level-1"></span>
+                    <span class="legend-cell level-2"></span>
+                    <span class="legend-cell level-3"></span>
+                    <span class="legend-cell level-4"></span>
+                </div>
+                <span>Više</span>
+            </div>
+        </div>
+
+        <div class="stats-section">
+            <div class="stat-card">
+                <div class="stat-number">{{weeklyAvg}}</div>
+                <div class="stat-label">Nedeljni prosek</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{bestStreak}}</div>
+                <div class="stat-label">Najbolji niz</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{totalDays}}</div>
+                <div class="stat-label">Aktivnih dana</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Time Tracker Modal -->
+<div class="tracker-modal" [class.show]="showTimerModal" (click)="onModalClick($event)">
+    <div class="tracker-modal-content">
+        <span class="close-modal" (click)="closeTimerModal()">&times;</span>
+        <h2>⏱️ Time Tracker</h2>
+        <p>Prati vrijeme utrošeno na različite aktivnosti</p>
+
+        <!-- Active Timer Display -->
+        <div class="active-timer-section" *ngIf="activeEntry">
+            <div class="active-timer-card">
+                <div class="timer-badge running">Aktivno</div>
+                <h3>{{ activeEntry.title }}</h3>
+                <div class="category-badge">
+                    {{ getCategoryIcon(activeEntry.category) }} {{ getCategoryLabel(activeEntry.category) }}
+                </div>
+                <div class="timer-display">{{ currentElapsedTime }}</div>
+                <button class="btn-stop" (click)="stopTimer(activeEntry.id)">
+                    ⏸️ Zaustavi Timer
+                </button>
+            </div>
+        </div>
+
+        <!-- New Timer Form -->
+        <div class="new-timer-section">
+            <h3>{{ activeEntry ? 'Pokreni novi timer' : 'Pokreni timer' }}</h3>
+            <div class="form-group">
+                <input 
+                    type="text" 
+                    [(ngModel)]="newEntryTitle"
+                    placeholder="Što radiš? (npr. 'Učenje matematike')"
+                    class="form-input">
+            </div>
+            <div class="form-group">
+                <select [(ngModel)]="newEntryCategory" class="form-select">
+                    <option value="study">📚 Učenje</option>
+                    <option value="work">💼 Posao</option>
+                    <option value="exercise">🏃 Vježbanje</option>
+                    <option value="other">📝 Ostalo</option>
+                </select>
+            </div>
+            <button class="btn-start" (click)="startNewTimer()">
+                ▶️ Pokreni Timer
+            </button>
+        </div>
+
+        <!-- Today's Summary -->
+        <div class="today-summary">
+            <h3>📅 Danas ukupno</h3>
+            <div class="summary-time">{{ getTodayTotalTime() }}</div>
+            <p class="summary-label">Ukupno vrijeme danas</p>
+        </div>
+
+        <!-- Time Entries List -->
+        <div class="time-entries-section">
+            <h3>📋 Povijest unosa</h3>
+            <div class="entries-list" *ngIf="timeEntries.length > 0">
+                <div 
+                    class="time-entry" 
+                    *ngFor="let entry of timeEntries"
+                    [class.running]="entry.isRunning">
+                    
+                    <div class="entry-header">
+                        <div class="entry-icon">{{ getCategoryIcon(entry.category) }}</div>
+                        <div class="entry-info">
+                            <h4>{{ entry.title }}</h4>
+                            <div class="entry-meta">
+                                <span class="entry-category">{{ getCategoryLabel(entry.category) }}</span>
+                                <span class="entry-time">
+                                    {{ entry.startTime | date:'HH:mm, dd.MM.yyyy' }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="entry-duration" [class.running]="entry.isRunning">
+                        {{ getEntryDuration(entry) }}
+                    </div>
+
+                    <div class="entry-actions">
+                        <button 
+                            *ngIf="!entry.isRunning" 
+                            class="btn-icon resume"
+                            (click)="resumeTimer(entry.id)"
+                            title="Nastavi">
+                            ▶️
+                        </button>
+                        <button 
+                            class="btn-icon delete"
+                            (click)="deleteEntry(entry.id)"
+                            title="Obriši">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="empty-state" *ngIf="timeEntries.length === 0">
+                <span class="empty-icon">⏱️</span>
+                <p>Nemaš još evidencija vremena. Pokreni prvi timer!</p>
+            </div>
+        </div>
+    </div>
+</div>
