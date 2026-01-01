@@ -1,9 +1,12 @@
-import { Component, OnInit, PLATFORM_ID, Inject } from '@angular/core';
+import { Component, OnInit, PLATFORM_ID, Inject, OnDestroy } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Firestore, collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc, Timestamp } from '@angular/fire/firestore';
+import { AuthService } from '../../services/auth.service';
 
 interface CalendarEvent {
-  id: string;
+  id?: string;
+  userId: string;
   title: string;
   description: string;
   date: Date;
@@ -18,7 +21,7 @@ interface CalendarEvent {
   templateUrl: './calendar.html',
   styleUrls: ['./calendar.css']
 })
-export class CalendarComponent implements OnInit {
+export class CalendarComponent implements OnInit, OnDestroy {
   currentDate = new Date();
   selectedDate: Date | null = null;
   calendarDays: Date[] = [];
@@ -38,42 +41,65 @@ export class CalendarComponent implements OnInit {
   monthNames = ['Januar', 'Februar', 'Mart', 'April', 'Maj', 'Juni', 'Juli', 'Avgust', 'Septembar', 'Oktobar', 'Novembar', 'Decembar'];
   dayNames = ['Pon', 'Uto', 'Sri', 'Čet', 'Pet', 'Sub', 'Ned'];
 
-  constructor(@Inject(PLATFORM_ID) private platformId: Object) {}
+  private eventsUnsubscribe: any;
+
+  constructor(
+    @Inject(PLATFORM_ID) private platformId: Object,
+    private firestore: Firestore,
+    private authService: AuthService
+  ) {}
 
   ngOnInit() {
     if (isPlatformBrowser(this.platformId)) {
-      this.loadEvents();
       this.generateCalendar();
       this.selectedDate = new Date();
-      this.filterEventsByDate();
-    }
-  }
-
-  loadEvents() {
-    const stored = localStorage.getItem('calendarEvents');
-    if (stored) {
-      this.events = JSON.parse(stored).map((e: any) => ({
-        ...e,
-        date: new Date(e.date)
-      }));
-    } else {
-      // Add some sample events
-      this.events = [
-        {
-          id: Date.now().toString(),
-          title: 'Ispit iz Web programiranja',
-          description: 'Finalni ispit',
-          date: new Date(new Date().setDate(new Date().getDate() + 7)),
-          type: 'exam',
-          completed: false
+      
+      // Listen to auth state and load user's events
+      this.authService.currentUser.subscribe(user => {
+        if (user) {
+          this.loadUserEvents(user.id);
+        } else {
+          // Unsubscribe from previous listeners
+          if (this.eventsUnsubscribe) this.eventsUnsubscribe();
+          
+          this.events = [];
+          this.filterEventsByDate();
         }
-      ];
-      this.saveEvents();
+      });
     }
   }
 
-  saveEvents() {
-    localStorage.setItem('calendarEvents', JSON.stringify(this.events));
+  ngOnDestroy() {
+    if (this.eventsUnsubscribe) {
+      this.eventsUnsubscribe();
+    }
+  }
+
+  private loadUserEvents(userId: string) {
+    const q = query(
+      collection(this.firestore, 'calendarEvents'),
+      where('userId', '==', userId)
+    );
+
+    this.eventsUnsubscribe = onSnapshot(q, (snapshot) => {
+      this.events = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        this.events.push({
+          id: doc.id,
+          userId: data['userId'],
+          title: data['title'],
+          description: data['description'],
+          date: (data['date'] as Timestamp).toDate(),
+          type: data['type'],
+          completed: data['completed']
+        });
+      });
+      
+      // Sort by date
+      this.events.sort((a, b) => a.date.getTime() - b.date.getTime());
+      this.filterEventsByDate();
+    });
   }
 
   generateCalendar() {
@@ -185,7 +211,13 @@ export class CalendarComponent implements OnInit {
     };
   }
 
-  addEvent() {
+  async addEvent() {
+    const user = this.authService.currentUserValue;
+    if (!user) {
+      alert('Morate biti prijavljeni!');
+      return;
+    }
+
     if (!this.newEvent.title || !this.newEvent.date) {
       alert('Molimo unesite naslov i datum!');
       return;
@@ -195,8 +227,8 @@ export class CalendarComponent implements OnInit {
     const [hours, minutes] = this.newEvent.time.split(':').map(Number);
     const eventDate = new Date(year, month - 1, day, hours, minutes);
 
-    const event: CalendarEvent = {
-      id: Date.now().toString(),
+    const event: Omit<CalendarEvent, 'id'> = {
+      userId: user.id,
       title: this.newEvent.title,
       description: this.newEvent.description,
       date: eventDate,
@@ -204,27 +236,26 @@ export class CalendarComponent implements OnInit {
       completed: false
     };
 
-    this.events.push(event);
-    this.events.sort((a, b) => a.date.getTime() - b.date.getTime());
-    this.saveEvents();
-    this.filterEventsByDate();
+    await addDoc(collection(this.firestore, 'calendarEvents'), {
+      ...event,
+      date: Timestamp.fromDate(event.date)
+    });
+
     this.closeEventForm();
   }
 
-  toggleEventCompleted(eventId: string) {
+  async toggleEventCompleted(eventId: string) {
     const event = this.events.find(e => e.id === eventId);
-    if (event) {
-      event.completed = !event.completed;
-      this.saveEvents();
-      this.filterEventsByDate();
+    if (event && event.id) {
+      await updateDoc(doc(this.firestore, 'calendarEvents', event.id), {
+        completed: !event.completed
+      });
     }
   }
 
-  deleteEvent(eventId: string) {
+  async deleteEvent(eventId: string) {
     if (confirm('Da li ste sigurni da želite obrisati ovaj događaj?')) {
-      this.events = this.events.filter(e => e.id !== eventId);
-      this.saveEvents();
-      this.filterEventsByDate();
+      await deleteDoc(doc(this.firestore, 'calendarEvents', eventId));
     }
   }
 

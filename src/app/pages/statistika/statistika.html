@@ -39,6 +39,26 @@
       <div class="stat-value">{{ stats.totalStudyTime }}h</div>
       <div class="stat-label">Ukupno sati učenja</div>
     </div>
+      <div class="stat-card">
+        <div class="stat-icon">⏲️</div>
+        <div class="stat-value">{{ stats.totalTimerTime }}h</div>
+        <div class="stat-label">Ukupno vrijeme (timer)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">💧</div>
+        <div class="stat-value">{{ stats.avgWater }}</div>
+        <div class="stat-label">Prosječno čaša vode</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🏃</div>
+        <div class="stat-value">{{ stats.avgExercise }} min</div>
+        <div class="stat-label">Prosječno vježbanje</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🍎</div>
+        <div class="stat-value">{{ stats.avgMeals }}</div>
+        <div class="stat-label">Prosječno obroka</div>
+      </div>
     <div class="stat-card">
       <div class="stat-icon">🎯</div>
       <div class="stat-value">{{ stats.productivityScore }}%</div>
@@ -66,6 +86,25 @@
         </div>
       </div>
     </div>
+
+      <!-- Water Chart (Bar Chart) -->
+      <div class="chart-card">
+        <h3>💧 Unos vode</h3>
+        <div class="chart-container">
+          <div class="bar-chart">
+            <div class="bar-group" *ngFor="let label of waterData.labels; let i = index">
+              <div class="bar-wrapper">
+                <div class="bar" 
+                     [style.height]="getBarHeight(waterData.data[i], 12)"
+                     [title]="waterData.data[i] + ' čaša'">
+                </div>
+                <span class="bar-value">{{ waterData.data[i] }}</span>
+              </div>
+              <span class="bar-label">{{ label }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
     <!-- Study Time Chart (Line Chart) -->
     <div class="chart-card">
@@ -109,6 +148,44 @@
         </svg>
       </div>
     </div>
+
+      <!-- Exercise Chart (Bar Chart) -->
+      <div class="chart-card">
+        <h3>🏃 Vježbanje (minute)</h3>
+        <div class="chart-container">
+          <div class="bar-chart">
+            <div class="bar-group" *ngFor="let label of exerciseData.labels; let i = index">
+              <div class="bar-wrapper">
+                <div class="bar" 
+                     [style.height]="getBarHeight(exerciseData.data[i], 60)"
+                     [title]="exerciseData.data[i] + ' min'">
+                </div>
+                <span class="bar-value">{{ exerciseData.data[i] }}m</span>
+              </div>
+              <span class="bar-label">{{ label }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Meals Chart (Bar Chart) -->
+      <div class="chart-card">
+        <h3>🍎 Obroci</h3>
+        <div class="chart-container">
+          <div class="bar-chart">
+            <div class="bar-group" *ngFor="let label of mealData.labels; let i = index">
+              <div class="bar-wrapper">
+                <div class="bar" 
+                     [style.height]="getBarHeight(mealData.data[i], 6)"
+                     [title]="mealData.data[i] + ' obroka'">
+                </div>
+                <span class="bar-value">{{ mealData.data[i] }}</span>
+              </div>
+              <span class="bar-label">{{ label }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
     <!-- Activity Distribution (Pie Chart) -->
     <div class="chart-card">

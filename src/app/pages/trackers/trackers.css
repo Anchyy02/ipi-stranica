@@ -149,6 +149,11 @@ p {
     color: #207cf5;
     font-size: 1.5rem;
     font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    line-height: 1;
     cursor: pointer;
     transition: all 0.2s ease;
 }
@@ -529,6 +534,67 @@ p {
 
 .time-entries-section {
     margin-top: 32px;
+}
+
+/* Simple history (placeholder trackers) */
+.simple-history {
+    margin-top: 24px;
+    padding: 24px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+}
+
+:root.dark-mode .simple-history {
+    background: #3a3a3a;
+    border-color: #404040;
+}
+
+.simple-history h3 {
+    margin: 0 0 16px;
+    color: #1f2937;
+    font-size: 1.1rem;
+}
+
+:root.dark-mode .simple-history h3 {
+    color: #e5e7eb;
+}
+
+.history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.history-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f9fafb;
+    border-radius: 10px;
+    padding: 12px 14px;
+}
+
+:root.dark-mode .history-row {
+    background: #2d2d2d;
+}
+
+.history-date {
+    color: #6b7280;
+    font-size: 0.9rem;
+}
+
+:root.dark-mode .history-date {
+    color: #9ca3af;
+}
+
+.history-value {
+    font-weight: 700;
+    color: #207cf5;
+}
+
+:root.dark-mode .history-value {
+    color: #7ec8ff;
 }
 
 .time-entries-section h3 {

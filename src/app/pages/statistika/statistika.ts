@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { StatisticsService } from '../../services/statistics.service';
+import { AuthService } from '../../services/auth.service';
 
 interface ChartData {
   labels: string[];
@@ -19,7 +21,7 @@ export class StatistikaComponent implements OnInit {
   filterPeriod: string = 'week'; // 'week' or 'month'
   selectedDate: string = new Date().toISOString().split('T')[0];
 
-  // Sleep data (Chat chart)
+  // Sleep data (Chart chart)
   sleepData: ChartData = {
     labels: [],
     data: []
@@ -27,6 +29,24 @@ export class StatistikaComponent implements OnInit {
 
   // Study time data (Line chart)
   studyData: ChartData = {
+    labels: [],
+    data: []
+  };
+
+  // Water (Bar)
+  waterData: ChartData = {
+    labels: [],
+    data: []
+  };
+
+  // Exercise (Bar)
+  exerciseData: ChartData = {
+    labels: [],
+    data: []
+  };
+
+  // Meals (Bar)
+  mealData: ChartData = {
     labels: [],
     data: []
   };
@@ -42,63 +62,148 @@ export class StatistikaComponent implements OnInit {
   stats = {
     avgSleep: 0,
     avgStudy: 0,
+    avgWater: 0,
+    avgExercise: 0,
+    avgMeals: 0,
     totalStudyTime: 0,
+    totalTimerTime: 0,
     productivityScore: 0
   };
 
+  loading = false;
+
+  constructor(
+    private statisticsService: StatisticsService,
+    private authService: AuthService
+  ) {}
+
   ngOnInit() {
-    this.loadData();
+    // Listen to auth state
+    this.authService.currentUser.subscribe(user => {
+      if (user) {
+        this.loadData();
+      } else {
+        this.resetData();
+      }
+    });
   }
 
-  loadData() {
-    if (this.filterPeriod === 'week') {
-      this.loadWeekData();
-    } else {
-      this.loadMonthData();
+  private resetData() {
+    this.sleepData = { labels: [], data: [] };
+    this.studyData = { labels: [], data: [] };
+    this.waterData = { labels: [], data: [] };
+    this.exerciseData = { labels: [], data: [] };
+    this.mealData = { labels: [], data: [] };
+    this.activityData.data = [0, 0, 0, 0];
+    this.stats = {
+      avgSleep: 0,
+      avgStudy: 0,
+      avgWater: 0,
+      avgExercise: 0,
+      avgMeals: 0,
+      totalStudyTime: 0,
+      totalTimerTime: 0,
+      productivityScore: 0
+    };
+  }
+
+  async loadData() {
+    this.loading = true;
+    try {
+      if (this.filterPeriod === 'week') {
+        await this.loadWeekData();
+      } else {
+        await this.loadMonthData();
+      }
+      this.calculateStats();
+    } catch (error) {
+      console.error('Error loading statistics:', error);
+    } finally {
+      this.loading = false;
     }
-    this.calculateStats();
   }
 
-  loadWeekData() {
-    const days = ['Pon', 'Uto', 'Sri', 'Čet', 'Pet', 'Sub', 'Ned'];
+  async loadWeekData() {
+    const data = await this.statisticsService.getWeeklyData(this.selectedDate);
     this.sleepData = {
-      labels: days,
-      data: this.getRandomData(7, 5, 9)
+      labels: data.labels,
+      data: data.sleepHours
     };
     this.studyData = {
-      labels: days,
-      data: this.getRandomData(7, 2, 8)
+      labels: data.labels,
+      data: data.studyHours
     };
+    this.waterData = {
+      labels: data.labels,
+      data: data.waterGlasses
+    };
+    this.exerciseData = {
+      labels: data.labels,
+      data: data.exerciseMinutes
+    };
+    this.mealData = {
+      labels: data.labels,
+      data: data.mealCount
+    };
+    this.updateActivityData(data.activityDistribution);
+
+    this.stats.totalStudyTime = data.totalStudyTimeHours;
+    this.stats.totalTimerTime = data.totalTimerHours;
   }
 
-  loadMonthData() {
-    const weeks = ['Sedmica 1', 'Sedmica 2', 'Sedmica 3', 'Sedmica 4'];
+  async loadMonthData() {
+    const data = await this.statisticsService.getMonthlyData(this.selectedDate);
     this.sleepData = {
-      labels: weeks,
-      data: this.getRandomData(4, 6, 8)
+      labels: data.labels,
+      data: data.sleepHours
     };
     this.studyData = {
-      labels: weeks,
-      data: this.getRandomData(4, 3, 7)
+      labels: data.labels,
+      data: data.studyHours
     };
+    this.waterData = {
+      labels: data.labels,
+      data: data.waterGlasses
+    };
+    this.exerciseData = {
+      labels: data.labels,
+      data: data.exerciseMinutes
+    };
+    this.mealData = {
+      labels: data.labels,
+      data: data.mealCount
+    };
+    this.updateActivityData(data.activityDistribution);
+
+    this.stats.totalStudyTime = data.totalStudyTimeHours;
+    this.stats.totalTimerTime = data.totalTimerHours;
   }
 
-  getRandomData(count: number, min: number, max: number): number[] {
-    return Array.from({ length: count }, () => 
-      Math.floor(Math.random() * (max - min + 1)) + min
-    );
+  private updateActivityData(distribution: { study: number; sleep: number; rest: number; other: number }) {
+    const total = distribution.study + distribution.sleep + distribution.rest + distribution.other;
+    if (total > 0) {
+      this.activityData.data = [
+        Math.round((distribution.study / total) * 100),
+        Math.round((distribution.sleep / total) * 100),
+        Math.round((distribution.rest / total) * 100),
+        Math.round((distribution.other / total) * 100)
+      ];
+    }
   }
 
   calculateStats() {
     this.stats.avgSleep = this.calculateAverage(this.sleepData.data);
     this.stats.avgStudy = this.calculateAverage(this.studyData.data);
-    this.stats.totalStudyTime = this.studyData.data.reduce((a, b) => a + b, 0);
+    this.stats.avgWater = this.calculateAverage(this.waterData.data);
+    this.stats.avgExercise = this.calculateAverage(this.exerciseData.data);
+    this.stats.avgMeals = this.calculateAverage(this.mealData.data);
     this.stats.productivityScore = Math.round(
       (this.stats.avgStudy / 8) * 100
     );
   }
 
   calculateAverage(data: number[]): number {
+    if (!data.length) return 0;
     return Math.round((data.reduce((a, b) => a + b, 0) / data.length) * 10) / 10;
   }
 
@@ -149,7 +254,6 @@ export class StatistikaComponent implements OnInit {
     });
   }
 
-  // AI Insights - Simple logic-based insights
   getAISleepInsight(): string {
     const avgSleep = this.stats.avgSleep;
     if (avgSleep < 6) {

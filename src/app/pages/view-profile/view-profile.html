@@ -1,10 +1,10 @@
 <div class="profile-container">
-  <div class="profile-card" *ngIf="currentUser">
+  <div class="profile-card" *ngIf="currentUser$ | async as currentUser">
     <div class="profile-header">
       <div class="profile-avatar">
         <span>{{ currentUser.name.charAt(0).toUpperCase() }}</span>
       </div>
-      <h1>View Profile</h1>
+      <h1>Profil</h1>
     </div>
     
     <div class="profile-info">
@@ -25,7 +25,7 @@
     </div>
     
     <div class="profile-actions">
-      <button (click)="logout()" class="logout-button">Odjavi se</button>
+      <button (click)="logout()" class="logout-button">Logout</button>
     </div>
   </div>
 </div>

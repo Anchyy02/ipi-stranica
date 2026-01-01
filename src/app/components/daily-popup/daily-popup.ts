@@ -1,7 +1,12 @@
 import { Component, OnInit, PLATFORM_ID, Inject } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { Firestore, doc, getDoc, setDoc } from '@angular/fire/firestore';
+import { AuthService } from '../../services/auth.service';
+import { StatisticsService } from '../../services/statistics.service';
 
 interface ProductivityMetrics {
+  userId: string;
+  date: string;
   studyHours: number;
   sleepHours: number;
   waterGlasses: number;
@@ -26,22 +31,33 @@ export class DailyPopupComponent implements OnInit {
     recommendations: string[];
   } | null = null;
 
-  constructor(@Inject(PLATFORM_ID) private platformId: Object) {}
+  constructor(
+    @Inject(PLATFORM_ID) private platformId: Object,
+    private firestore: Firestore,
+    private authService: AuthService,
+    private statisticsService: StatisticsService
+  ) {}
 
   ngOnInit() {
     if (isPlatformBrowser(this.platformId)) {
-      // Check if popup should be shown today
-      this.checkAndShowPopup();
+      // Listen to auth state
+      this.authService.currentUser.subscribe(user => {
+        if (user) {
+          this.checkAndShowPopup(user.id);
+        }
+      });
     }
   }
 
-  checkAndShowPopup() {
-    const lastShown = localStorage.getItem('dailyPopupLastShown');
-    const today = new Date().toDateString();
-
-    if (lastShown !== today) {
-      // Generate metrics (in real app, this would come from actual tracking data)
-      this.generateMetrics();
+  async checkAndShowPopup(userId: string) {
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Check if popup was shown today
+    const popupDoc = await getDoc(doc(this.firestore, 'dailyPopups', userId));
+    
+    if (!popupDoc.exists() || popupDoc.data()['lastShown'] !== today) {
+      // Generate metrics from actual data
+      await this.generateMetrics(userId, today);
       this.analyzeProductivity();
       
       // Show popup after a short delay
@@ -51,20 +67,44 @@ export class DailyPopupComponent implements OnInit {
     }
   }
 
-  generateMetrics() {
-    // Simulate getting data from localStorage or API
-    const savedMetrics = localStorage.getItem('productivityMetrics');
-    
-    if (savedMetrics) {
-      this.metrics = JSON.parse(savedMetrics);
-    } else {
-      // Generate sample data
+  async generateMetrics(userId: string, date: string) {
+    try {
+      // Try to get existing metrics for today
+      const metricsDoc = await getDoc(doc(this.firestore, 'productivityMetrics', `${userId}_${date}`));
+      
+      if (metricsDoc.exists()) {
+        this.metrics = metricsDoc.data() as ProductivityMetrics;
+      } else {
+        // Get data from statistics service
+        const weekData = await this.statisticsService.getWeeklyData();
+        const todayIndex = new Date().getDay() - 1; // Monday = 0
+        const studyHours = todayIndex >= 0 && todayIndex < 7 ? weekData.studyHours[todayIndex] : 0;
+        
+        // Create new metrics
+        this.metrics = {
+          userId,
+          date,
+          studyHours: Math.round(studyHours * 10) / 10,
+          sleepHours: 7 + Math.random() * 2, // Placeholder - integrate with sleep tracker
+          waterGlasses: Math.floor(Math.random() * 6) + 2, // Placeholder
+          tasksCompleted: Math.floor(Math.random() * 10) + 3, // Placeholder
+          mood: this.getRandomMood()
+        };
+        
+        // Save to Firestore
+        await setDoc(doc(this.firestore, 'productivityMetrics', `${userId}_${date}`), this.metrics);
+      }
+    } catch (error) {
+      console.error('Error generating metrics:', error);
+      // Fallback to sample data
       this.metrics = {
-        studyHours: Math.floor(Math.random() * 8) + 2,
-        sleepHours: Math.floor(Math.random() * 3) + 6,
-        waterGlasses: Math.floor(Math.random() * 6) + 2,
-        tasksCompleted: Math.floor(Math.random() * 10) + 3,
-        mood: this.getRandomMood()
+        userId,
+        date,
+        studyHours: 4,
+        sleepHours: 7,
+        waterGlasses: 5,
+        tasksCompleted: 6,
+        mood: 'good'
       };
     }
   }
@@ -154,10 +194,17 @@ export class DailyPopupComponent implements OnInit {
     };
   }
 
-  closePopup() {
+  async closePopup() {
     this.showPopup = false;
-    // Mark as shown for today
-    localStorage.setItem('dailyPopupLastShown', new Date().toDateString());
+    
+    const user = this.authService.currentUserValue;
+    if (user) {
+      const today = new Date().toISOString().split('T')[0];
+      // Mark as shown for today
+      await setDoc(doc(this.firestore, 'dailyPopups', user.id), {
+        lastShown: today
+      });
+    }
   }
 
   getScoreClass(): string {

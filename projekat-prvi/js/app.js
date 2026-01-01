@@ -169,62 +169,30 @@
     container.appendChild(iframe);
   }
 
-  function updateNavAuth(){
+  async function updateNavAuth(){
     var nav = document.querySelector('nav ul');
     if(!nav) return;
     
-    // Check if user is logged in
-    var currentUser = null;
-    try {
-      var userStr = localStorage.getItem('currentUser');
-      if(userStr) currentUser = JSON.parse(userStr);
-    } catch(e) {
-      console.error('Error parsing user:', e);
-    }
-
-    // Find existing login link
-    var loginLi = null;
+    // projekat-prvi should NOT show profile/logout; only Angular handles that.
+    // It should always show the Login link.
+    // Clean up any leftovers from older versions.
+    var existingProfile = nav.querySelector('#auth-profile');
+    var existingLogout = nav.querySelector('#auth-logout');
+    var existingLogin = null;
+    
     var items = nav.querySelectorAll('li');
     items.forEach(function(li){
       var a = li.querySelector('a');
       if(a && (/login\.html$/i.test(a.href) || /Login/i.test(a.textContent))){ 
-        loginLi = li; 
+        existingLogin = li; 
       }
     });
 
- 
+    if(existingProfile) existingProfile.parentElement.remove();
+    if(existingLogout) existingLogout.parentElement.remove();
 
-    if(currentUser){
-      // User is logged in - show profile link and logout button
-      var profileLi = document.createElement('li');
-      var profileLink = document.createElement('a');
-      profileLink.id = 'auth-profile';
-      profileLink.href = '/view-profile';
-      profileLink.textContent = '👤 ' + currentUser.name;
-      profileLink.title = 'View Profile';
-      profileLi.appendChild(profileLink);
-      nav.appendChild(profileLi);
-
-      var logoutLi = document.createElement('li');
-      var logoutLink = document.createElement('a');
-      logoutLink.id = 'auth-logout';
-      logoutLink.href = '#';
-      logoutLink.textContent = 'Odjavi se';
-      logoutLink.style.background = '#0976dbff';
-      logoutLink.addEventListener('click', function(e){
-        e.preventDefault();
-        if(confirm('Da li sigurno želite da se odjavite?')){
-          localStorage.removeItem('currentUser');
-          sessionStorage.removeItem('justLoggedIn');
-          console.log('User logged out');
-          // Refresh the page to update navigation
-          window.location.href = 'index.html';
-        }
-      });
-      logoutLi.appendChild(logoutLink);
-      nav.appendChild(logoutLi);
-    } else {
-      // User is not logged in - show login link
+    // Ensure login link exists (always)
+    if(!existingLogin){
       var loginLi = document.createElement('li');
       var loginLink = document.createElement('a');
       loginLink.href = 'login.html';
@@ -234,18 +202,18 @@
     }
   }
 
-  ready(function(){
+  ready(async function(){
     createTools();
     injectModal();
     enhanceDropdown();
     initFunZoneRouter();
-    updateNavAuth();
     
-    // Update nav on storage changes (from other tabs)
-    window.addEventListener('storage', function(e){
-      if(e.key === 'currentUser'){
-        updateNavAuth();
-      }
-    });
+    if(typeof firebase !== 'undefined' && firebase.auth){
+      await updateNavAuth();
+      
+      firebase.auth().onAuthStateChanged(async () => {
+        await updateNavAuth();
+      });
+    }
   });
 })();

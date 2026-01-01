@@ -20,7 +20,10 @@
       </div>
       <div *ngIf="errorMessage" class="error-message show">{{ errorMessage }}</div>
       <div *ngIf="successMessage" class="success-message show">{{ successMessage }}</div>
-      <button type="submit" class="btn-primary">Registruj se</button>
+      <button type="submit" class="btn-primary" [disabled]="loading">
+        <span *ngIf="!loading">Registruj se</span>
+        <span *ngIf="loading">Registracija...</span>
+      </button>
     </form>
     <p class="auth-link">Već imaš nalog? <a [routerLink]="['/login']">Prijavi se</a></p>
   </div>

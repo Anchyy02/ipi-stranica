@@ -14,52 +14,47 @@ export class Login {
   email = '';
   password = '';
   errorMessage = '';
+  loading = false;
 
   constructor(
     private router: Router,
-    @Inject(PLATFORM_ID) private platformId: Object,
     private authService: AuthService
   ) {}
 
-  onSubmit() {
-    if (!isPlatformBrowser(this.platformId)) return;
-
+  async onSubmit() {
     if (!this.email || !this.password) {
       this.showError('Sva polja su obavezna!');
       return;
     }
 
-    const users = this.getUsers();
-    const user = users.find((u: any) => u.email === this.email.toLowerCase() && u.password === this.password);
+    this.loading = true;
+    this.errorMessage = '';
 
-    if (!user) {
-      this.showError('Pogrešan email ili lozinka!');
-      return;
+    try {
+      await this.authService.login(this.email, this.password);
+      
+      console.log('User logged in successfully');
+      
+      // Navigate to home
+      this.router.navigate(['/']);
+    } catch (error: any) {
+      console.error('Login error:', error);
+      
+      // Handle specific Firebase errors
+      if (error.code === 'auth/user-not-found') {
+        this.showError('Korisnik sa ovim emailom ne postoji!');
+      } else if (error.code === 'auth/wrong-password') {
+        this.showError('Pogrešna lozinka!');
+      } else if (error.code === 'auth/invalid-email') {
+        this.showError('Nevažeća email adresa!');
+      } else if (error.code === 'auth/too-many-requests') {
+        this.showError('Previše neuspješnih pokušaja. Pokušajte kasnije.');
+      } else {
+        this.showError('Greška prilikom prijavljivanja. Pokušajte ponovo.');
+      }
+    } finally {
+      this.loading = false;
     }
-
-    const currentUser = {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      loginTime: new Date().toISOString()
-    };
-
-    // Use AuthService to handle login
-    this.authService.login(currentUser);
-    
-    // Set flag for fresh login
-    sessionStorage.setItem('justLoggedIn', 'true');
-    
-    console.log('User logged in via Angular:', currentUser);
-    
-    // Navigate to home, header will redirect to profile
-    this.router.navigate(['/']);
-  }
-
-  private getUsers(): any[] {
-    if (!isPlatformBrowser(this.platformId)) return [];
-    const users = localStorage.getItem('users');
-    return users ? JSON.parse(users) : [];
   }
 
   private showError(message: string) {

@@ -1,9 +1,12 @@
 import { Injectable, PLATFORM_ID, Inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Observable } from 'rxjs';
+import { Firestore, collection, addDoc, updateDoc, deleteDoc, doc, query, where, onSnapshot, getDocs, Timestamp } from '@angular/fire/firestore';
+import { AuthService } from './auth.service';
 
 export interface Notification {
-  id: string;
+  id?: string;
+  userId: string;
   title: string;
   message: string;
   type: 'info' | 'success' | 'warning' | 'error';
@@ -12,7 +15,8 @@ export interface Notification {
 }
 
 export interface Reminder {
-  id: string;
+  id?: string;
+  userId: string;
   title: string;
   message: string;
   time: Date;
@@ -31,39 +35,84 @@ export class NotificationService {
   public reminders$ = this.reminders.asObservable();
 
   private checkInterval: any;
+  private notificationsUnsubscribe: any;
+  private remindersUnsubscribe: any;
 
-  constructor(@Inject(PLATFORM_ID) private platformId: Object) {
+  constructor(
+    @Inject(PLATFORM_ID) private platformId: Object,
+    private firestore: Firestore,
+    private authService: AuthService
+  ) {
     if (isPlatformBrowser(this.platformId)) {
-      this.loadFromStorage();
       this.requestNotificationPermission();
       this.startReminderChecker();
+
+      // Listen to auth state and load user's data
+      this.authService.currentUser.subscribe(user => {
+        if (user) {
+          this.loadUserNotifications(user.id);
+          this.loadUserReminders(user.id);
+        } else {
+          // Unsubscribe from previous listeners
+          if (this.notificationsUnsubscribe) this.notificationsUnsubscribe();
+          if (this.remindersUnsubscribe) this.remindersUnsubscribe();
+          
+          this.notifications.next([]);
+          this.reminders.next([]);
+        }
+      });
     }
   }
 
-  private loadFromStorage() {
-    const storedNotifications = localStorage.getItem('notifications');
-    const storedReminders = localStorage.getItem('reminders');
+  private loadUserNotifications(userId: string) {
+    const q = query(
+      collection(this.firestore, 'notifications'),
+      where('userId', '==', userId)
+    );
 
-    if (storedNotifications) {
-      const notifications = JSON.parse(storedNotifications);
-      this.notifications.next(notifications.map((n: any) => ({
-        ...n,
-        timestamp: new Date(n.timestamp)
-      })));
-    }
-
-    if (storedReminders) {
-      const reminders = JSON.parse(storedReminders);
-      this.reminders.next(reminders.map((r: any) => ({
-        ...r,
-        time: new Date(r.time)
-      })));
-    }
+    this.notificationsUnsubscribe = onSnapshot(q, (snapshot) => {
+      const notifications: Notification[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        notifications.push({
+          id: doc.id,
+          userId: data['userId'],
+          title: data['title'],
+          message: data['message'],
+          type: data['type'],
+          timestamp: (data['timestamp'] as Timestamp).toDate(),
+          read: data['read']
+        });
+      });
+      
+      // Sort by timestamp descending
+      notifications.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+      this.notifications.next(notifications);
+    });
   }
 
-  private saveToStorage() {
-    localStorage.setItem('notifications', JSON.stringify(this.notifications.value));
-    localStorage.setItem('reminders', JSON.stringify(this.reminders.value));
+  private loadUserReminders(userId: string) {
+    const q = query(
+      collection(this.firestore, 'reminders'),
+      where('userId', '==', userId)
+    );
+
+    this.remindersUnsubscribe = onSnapshot(q, (snapshot) => {
+      const reminders: Reminder[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        reminders.push({
+          id: doc.id,
+          userId: data['userId'],
+          title: data['title'],
+          message: data['message'],
+          time: (data['time'] as Timestamp).toDate(),
+          recurring: data['recurring'],
+          enabled: data['enabled']
+        });
+      });
+      this.reminders.next(reminders);
+    });
   }
 
   requestNotificationPermission() {
@@ -72,9 +121,12 @@ export class NotificationService {
     }
   }
 
-  addNotification(title: string, message: string, type: 'info' | 'success' | 'warning' | 'error' = 'info') {
-    const notification: Notification = {
-      id: Date.now().toString(),
+  async addNotification(title: string, message: string, type: 'info' | 'success' | 'warning' | 'error' = 'info') {
+    const user = this.authService.currentUserValue;
+    if (!user) return;
+
+    const notification: Omit<Notification, 'id'> = {
+      userId: user.id,
       title,
       message,
       type,
@@ -82,9 +134,10 @@ export class NotificationService {
       read: false
     };
 
-    const current = this.notifications.value;
-    this.notifications.next([notification, ...current]);
-    this.saveToStorage();
+    await addDoc(collection(this.firestore, 'notifications'), {
+      ...notification,
+      timestamp: Timestamp.fromDate(notification.timestamp)
+    });
 
     // Browser notification
     if ('Notification' in window && Notification.permission === 'granted') {
@@ -95,29 +148,47 @@ export class NotificationService {
     }
   }
 
-  markAsRead(id: string) {
-    const notifications = this.notifications.value.map(n =>
-      n.id === id ? { ...n, read: true } : n
+  async markAsRead(id: string) {
+    if (!id) return;
+    await updateDoc(doc(this.firestore, 'notifications', id), {
+      read: true
+    });
+  }
+
+  async markAllAsRead() {
+    const user = this.authService.currentUserValue;
+    if (!user) return;
+
+    const q = query(
+      collection(this.firestore, 'notifications'),
+      where('userId', '==', user.id),
+      where('read', '==', false)
     );
-    this.notifications.next(notifications);
-    this.saveToStorage();
+
+    const snapshot = await getDocs(q);
+    const promises = snapshot.docs.map(doc => 
+      updateDoc(doc.ref, { read: true })
+    );
+    await Promise.all(promises);
   }
 
-  markAllAsRead() {
-    const notifications = this.notifications.value.map(n => ({ ...n, read: true }));
-    this.notifications.next(notifications);
-    this.saveToStorage();
+  async deleteNotification(id: string) {
+    if (!id) return;
+    await deleteDoc(doc(this.firestore, 'notifications', id));
   }
 
-  deleteNotification(id: string) {
-    const notifications = this.notifications.value.filter(n => n.id !== id);
-    this.notifications.next(notifications);
-    this.saveToStorage();
-  }
+  async clearAllNotifications() {
+    const user = this.authService.currentUserValue;
+    if (!user) return;
 
-  clearAllNotifications() {
-    this.notifications.next([]);
-    this.saveToStorage();
+    const q = query(
+      collection(this.firestore, 'notifications'),
+      where('userId', '==', user.id)
+    );
+
+    const snapshot = await getDocs(q);
+    const promises = snapshot.docs.map(doc => deleteDoc(doc.ref));
+    await Promise.all(promises);
   }
 
   getUnreadCount(): number {
@@ -125,9 +196,12 @@ export class NotificationService {
   }
 
   // Reminders
-  addReminder(title: string, message: string, time: Date, recurring?: 'daily' | 'weekly' | 'monthly') {
-    const reminder: Reminder = {
-      id: Date.now().toString(),
+  async addReminder(title: string, message: string, time: Date, recurring?: 'daily' | 'weekly' | 'monthly') {
+    const user = this.authService.currentUserValue;
+    if (!user) return;
+
+    const reminder: Omit<Reminder, 'id'> = {
+      userId: user.id,
       title,
       message,
       time,
@@ -135,31 +209,33 @@ export class NotificationService {
       enabled: true
     };
 
-    const current = this.reminders.value;
-    this.reminders.next([...current, reminder]);
-    this.saveToStorage();
+    await addDoc(collection(this.firestore, 'reminders'), {
+      ...reminder,
+      time: Timestamp.fromDate(reminder.time)
+    });
   }
 
-  updateReminder(id: string, updates: Partial<Reminder>) {
-    const reminders = this.reminders.value.map(r =>
-      r.id === id ? { ...r, ...updates } : r
-    );
-    this.reminders.next(reminders);
-    this.saveToStorage();
+  async updateReminder(id: string, updates: Partial<Reminder>) {
+    if (!id) return;
+    
+    const updateData: any = { ...updates };
+    if (updates.time) {
+      updateData.time = Timestamp.fromDate(updates.time);
+    }
+    
+    await updateDoc(doc(this.firestore, 'reminders', id), updateData);
   }
 
-  deleteReminder(id: string) {
-    const reminders = this.reminders.value.filter(r => r.id !== id);
-    this.reminders.next(reminders);
-    this.saveToStorage();
+  async deleteReminder(id: string) {
+    if (!id) return;
+    await deleteDoc(doc(this.firestore, 'reminders', id));
   }
 
-  toggleReminder(id: string) {
-    const reminders = this.reminders.value.map(r =>
-      r.id === id ? { ...r, enabled: !r.enabled } : r
-    );
-    this.reminders.next(reminders);
-    this.saveToStorage();
+  async toggleReminder(id: string) {
+    const reminder = this.reminders.value.find(r => r.id === id);
+    if (reminder && reminder.id) {
+      await this.updateReminder(reminder.id, { enabled: !reminder.enabled });
+    }
   }
 
   private startReminderChecker() {
@@ -177,7 +253,7 @@ export class NotificationService {
     const reminders = this.reminders.value;
 
     reminders.forEach(reminder => {
-      if (!reminder.enabled) return;
+      if (!reminder.enabled || !reminder.id) return;
 
       const reminderTime = new Date(reminder.time);
       const diffMinutes = Math.abs((now.getTime() - reminderTime.getTime()) / 60000);
@@ -216,6 +292,12 @@ export class NotificationService {
   ngOnDestroy() {
     if (this.checkInterval) {
       clearInterval(this.checkInterval);
+    }
+    if (this.notificationsUnsubscribe) {
+      this.notificationsUnsubscribe();
+    }
+    if (this.remindersUnsubscribe) {
+      this.remindersUnsubscribe();
     }
   }
 

@@ -4,7 +4,9 @@
   </a>
   <nav>
     <ul>
-      <li *ngIf="currentUser"><a [routerLink]="['/view-profile']" routerLinkActive="active">View Profile ({{ currentUser.name }})</a></li>
+      <ng-container *ngIf="currentUser$ | async as currentUser; else loggedOut">
+        <li><a [routerLink]="['/view-profile']" routerLinkActive="active">View Profile ({{ currentUser.name }})</a></li>
+      </ng-container>
       <li><a [routerLink]="['/statistika']" routerLinkActive="active">Statistika</a></li>
       <li><a [routerLink]="['/calendar']" routerLinkActive="active">Kalendar</a></li>
       <li><a [routerLink]="['/student-fun-zone']" routerLinkActive="active">Fun Zone</a></li>
@@ -15,7 +17,12 @@
           <span *ngIf="isDarkMode">☀️</span>
         </button>
       </li>
-      <li *ngIf="!currentUser"><a href="/projekat-prvi/login.html">Login</a></li>
+      <ng-container *ngIf="currentUser$ | async as currentUser; else loggedOut">
+        <li><a href="#" (click)="logout(); $event.preventDefault()" style="background: #0976dbff;">Odjavi se</a></li>
+      </ng-container>
+      <ng-template #loggedOut>
+        <li><a href="/projekat-prvi/login.html">Login</a></li>
+      </ng-template>
     </ul>
   </nav>
 </header>

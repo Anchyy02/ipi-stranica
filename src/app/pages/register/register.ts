@@ -1,7 +1,8 @@
-import { Component, PLATFORM_ID, Inject } from '@angular/core';
+import { Component } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-register',
@@ -16,15 +17,14 @@ export class Register {
   confirmPassword = '';
   errorMessage = '';
   successMessage = '';
+  loading = false;
 
   constructor(
     private router: Router,
-    @Inject(PLATFORM_ID) private platformId: Object
+    private authService: AuthService
   ) {}
 
-  onSubmit() {
-    if (!isPlatformBrowser(this.platformId)) return;
-
+  async onSubmit() {
     if (!this.name || !this.email || !this.password) {
       this.showError('Sva polja su obavezna!');
       return;
@@ -40,36 +40,33 @@ export class Register {
       return;
     }
 
-    const users = this.getUsers();
-    const userExists = users.find((u: any) => u.email === this.email.toLowerCase());
+    this.loading = true;
+    this.errorMessage = '';
 
-    if (userExists) {
-      this.showError('Korisnik sa ovim emailom već postoji!');
-      return;
+    try {
+      await this.authService.register(this.email, this.password, this.name);
+      
+      this.showSuccess('Uspješno ste se registrovali! Preusmjeravam na home...');
+
+      setTimeout(() => {
+        this.router.navigate(['/']);
+      }, 2000);
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      
+      // Handle specific Firebase errors
+      if (error.code === 'auth/email-already-in-use') {
+        this.showError('Korisnik sa ovim emailom već postoji!');
+      } else if (error.code === 'auth/invalid-email') {
+        this.showError('Nevažeća email adresa!');
+      } else if (error.code === 'auth/weak-password') {
+        this.showError('Lozinka je previše slaba!');
+      } else {
+        this.showError('Greška prilikom registracije. Pokušajte ponovo.');
+      }
+    } finally {
+      this.loading = false;
     }
-
-    const newUser = {
-      id: Date.now(),
-      name: this.name,
-      email: this.email.toLowerCase(),
-      password: this.password,
-      createdAt: new Date().toISOString()
-    };
-
-    users.push(newUser);
-    localStorage.setItem('users', JSON.stringify(users));
-
-    this.showSuccess('Uspješno ste se registrovali! Preusmjeravam na login...');
-
-    setTimeout(() => {
-      this.router.navigate(['/login']);
-    }, 2000);
-  }
-
-  private getUsers(): any[] {
-    if (!isPlatformBrowser(this.platformId)) return [];
-    const users = localStorage.getItem('users');
-    return users ? JSON.parse(users) : [];
   }
 
   private showError(message: string) {

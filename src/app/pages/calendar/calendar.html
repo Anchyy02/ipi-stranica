@@ -66,13 +66,13 @@
             <button 
               class="action-btn" 
               [class.completed]="event.completed"
-              (click)="toggleEventCompleted(event.id)"
+              (click)="toggleEventCompleted(event.id!)"
               [title]="event.completed ? 'Označi kao nezavršeno' : 'Označi kao završeno'">
               {{ event.completed ? '✓' : '○' }}
             </button>
             <button 
               class="action-btn delete" 
-              (click)="deleteEvent(event.id)"
+              (click)="deleteEvent(event.id!)"
               title="Obriši">
               🗑️
             </button>

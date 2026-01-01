@@ -11,7 +11,10 @@
         <input type="password" id="password" name="password" [(ngModel)]="password" required>
       </div>
       <div *ngIf="errorMessage" class="error-message show">{{ errorMessage }}</div>
-      <button type="submit" class="btn-primary">Prijavi se</button>
+      <button type="submit" class="btn-primary" [disabled]="loading">
+        <span *ngIf="!loading">Prijavi se</span>
+        <span *ngIf="loading">Prijavljivanje...</span>
+      </button>
     </form>
     <p class="auth-link">Nemaš nalog? <a [routerLink]="['/register']">Registruj se</a></p>
   </div>

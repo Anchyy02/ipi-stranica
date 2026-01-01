@@ -16,29 +16,32 @@
         <p>Prati vrijeme unesenih zadataka</p>
     </div>
 
-    <!-- Placeholder Cards -->
-    <div class="tracker-card placeholder">
+    <!-- Exercise Tracker -->
+    <div class="tracker-card active" (click)="openTracker('exercise')">
         <div class="tracker-icon">🏃</div>
         <h3>Exercise Tracker</h3>
-        <p>Uskoro...</p>
+        <p>Prati minute vježbanja</p>
     </div>
 
-    <div class="tracker-card placeholder">
+    <!-- Sleep Tracker -->
+    <div class="tracker-card active" (click)="openTracker('sleep')">
         <div class="tracker-icon">😴</div>
         <h3>Sleep Tracker</h3>
-        <p>Uskoro...</p>
+        <p>Prati sate spavanja</p>
     </div>
 
-    <div class="tracker-card placeholder">
+    <!-- Study Hours Tracker -->
+    <div class="tracker-card active" (click)="openTracker('study')">
         <div class="tracker-icon">📚</div>
         <h3>Study Hours</h3>
-        <p>Uskoro...</p>
+        <p>Prati sate učenja</p>
     </div>
 
-    <div class="tracker-card placeholder">
+    <!-- Meal Tracker -->
+    <div class="tracker-card active" (click)="openTracker('meal')">
         <div class="tracker-icon">🍎</div>
         <h3>Meal Tracker</h3>
-        <p>Uskoro...</p>
+        <p>Prati broj obroka</p>
     </div>
 </div>
 
@@ -133,7 +136,17 @@
                     {{ getCategoryIcon(activeEntry.category) }} {{ getCategoryLabel(activeEntry.category) }}
                 </div>
                 <div class="timer-display">{{ currentElapsedTime }}</div>
-                <button class="btn-stop" (click)="stopTimer(activeEntry.id)">
+
+                <div class="glass-counter">
+                    <button class="btn-counter" (click)="decreaseActiveTime()">-</button>
+                    <div class="glass-display">
+                        <span class="glass-count">{{ TIME_ADJUST_STEP_MINUTES }}</span>
+                        <span class="glass-label">min korak</span>
+                    </div>
+                    <button class="btn-counter" (click)="increaseActiveTime()">+</button>
+                </div>
+
+                <button class="btn-stop" (click)="stopTimer(activeEntry.id!)">
                     ⏸️ Zaustavi Timer
                 </button>
             </div>
@@ -199,13 +212,13 @@
                         <button 
                             *ngIf="!entry.isRunning" 
                             class="btn-icon resume"
-                            (click)="resumeTimer(entry.id)"
+                            (click)="resumeTimer(entry.id!)"
                             title="Nastavi">
                             ▶️
                         </button>
                         <button 
                             class="btn-icon delete"
-                            (click)="deleteEntry(entry.id)"
+                            (click)="deleteEntry(entry.id!)"
                             title="Obriši">
                             🗑️
                         </button>
@@ -217,6 +230,166 @@
                 <span class="empty-icon">⏱️</span>
                 <p>Nemaš još evidencija vremena. Pokreni prvi timer!</p>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Exercise Tracker Modal -->
+<div class="tracker-modal" [class.show]="showExerciseModal" (click)="onModalClick($event)">
+    <div class="tracker-modal-content">
+        <span class="close-modal" (click)="closeTracker()">&times;</span>
+        <h2>🏃 Exercise Tracker</h2>
+        <p>Koliko minuta vježbanja danas?</p>
+
+        <div class="water-input-section">
+            <div class="today-section">
+                <h3>Danas: <span>{{todayDate}}</span></h3>
+                <div class="glass-counter">
+                    <button class="btn-counter" (click)="decreaseExercise()">-</button>
+                    <div class="glass-display">
+                        <span class="glass-count">{{todayExerciseMinutes}}</span>
+                        <span class="glass-label">min</span>
+                    </div>
+                    <button class="btn-counter" (click)="increaseExercise()">+</button>
+                </div>
+                <p class="water-goal">Korak: 5 minuta</p>
+            </div>
+        </div>
+
+        <div class="simple-history">
+            <h3>Poslednjih 7 dana</h3>
+            <div class="history-list" *ngIf="exerciseHistory.length > 0; else noExercise">
+                <div class="history-row" *ngFor="let item of exerciseHistory">
+                    <span class="history-date">{{ formatShortDate(item.date) }}</span>
+                    <span class="history-value">{{ item.value }} min</span>
+                </div>
+            </div>
+            <ng-template #noExercise>
+                <div class="empty-state">
+                    <span class="empty-icon">🏃</span>
+                    <p>Nema unosa još.</p>
+                </div>
+            </ng-template>
+        </div>
+    </div>
+</div>
+
+<!-- Sleep Tracker Modal -->
+<div class="tracker-modal" [class.show]="showSleepModal" (click)="onModalClick($event)">
+    <div class="tracker-modal-content">
+        <span class="close-modal" (click)="closeTracker()">&times;</span>
+        <h2>😴 Sleep Tracker</h2>
+        <p>Koliko sati spavanja danas?</p>
+
+        <div class="water-input-section">
+            <div class="today-section">
+                <h3>Danas: <span>{{todayDate}}</span></h3>
+                <div class="glass-counter">
+                    <button class="btn-counter" (click)="decreaseSleep()">-</button>
+                    <div class="glass-display">
+                        <span class="glass-count">{{todaySleepHours}}</span>
+                        <span class="glass-label">h</span>
+                    </div>
+                    <button class="btn-counter" (click)="increaseSleep()">+</button>
+                </div>
+                <p class="water-goal">Korak: 0.5h</p>
+            </div>
+        </div>
+
+        <div class="simple-history">
+            <h3>Poslednjih 7 dana</h3>
+            <div class="history-list" *ngIf="sleepHistory.length > 0; else noSleep">
+                <div class="history-row" *ngFor="let item of sleepHistory">
+                    <span class="history-date">{{ formatShortDate(item.date) }}</span>
+                    <span class="history-value">{{ item.value }} h</span>
+                </div>
+            </div>
+            <ng-template #noSleep>
+                <div class="empty-state">
+                    <span class="empty-icon">😴</span>
+                    <p>Nema unosa još.</p>
+                </div>
+            </ng-template>
+        </div>
+    </div>
+</div>
+
+<!-- Study Tracker Modal -->
+<div class="tracker-modal" [class.show]="showStudyModal" (click)="onModalClick($event)">
+    <div class="tracker-modal-content">
+        <span class="close-modal" (click)="closeTracker()">&times;</span>
+        <h2>📚 Study Hours</h2>
+        <p>Koliko sati učenja danas?</p>
+
+        <div class="water-input-section">
+            <div class="today-section">
+                <h3>Danas: <span>{{todayDate}}</span></h3>
+                <div class="glass-counter">
+                    <button class="btn-counter" (click)="decreaseStudy()">-</button>
+                    <div class="glass-display">
+                        <span class="glass-count">{{todayStudyHours}}</span>
+                        <span class="glass-label">h</span>
+                    </div>
+                    <button class="btn-counter" (click)="increaseStudy()">+</button>
+                </div>
+                <p class="water-goal">Korak: 0.5h</p>
+            </div>
+        </div>
+
+        <div class="simple-history">
+            <h3>Poslednjih 7 dana</h3>
+            <div class="history-list" *ngIf="studyHistory.length > 0; else noStudy">
+                <div class="history-row" *ngFor="let item of studyHistory">
+                    <span class="history-date">{{ formatShortDate(item.date) }}</span>
+                    <span class="history-value">{{ item.value }} h</span>
+                </div>
+            </div>
+            <ng-template #noStudy>
+                <div class="empty-state">
+                    <span class="empty-icon">📚</span>
+                    <p>Nema unosa još.</p>
+                </div>
+            </ng-template>
+        </div>
+    </div>
+</div>
+
+<!-- Meal Tracker Modal -->
+<div class="tracker-modal" [class.show]="showMealModal" (click)="onModalClick($event)">
+    <div class="tracker-modal-content">
+        <span class="close-modal" (click)="closeTracker()">&times;</span>
+        <h2>🍎 Meal Tracker</h2>
+        <p>Koliko obroka danas?</p>
+
+        <div class="water-input-section">
+            <div class="today-section">
+                <h3>Danas: <span>{{todayDate}}</span></h3>
+                <div class="glass-counter">
+                    <button class="btn-counter" (click)="decreaseMeals()">-</button>
+                    <div class="glass-display">
+                        <span class="glass-count">{{todayMeals}}</span>
+                        <span class="glass-label">obroka</span>
+                    </div>
+                    <button class="btn-counter" (click)="increaseMeals()">+</button>
+                </div>
+                <p class="water-goal">Korak: 1</p>
+            </div>
+        </div>
+
+        <div class="simple-history">
+            <h3>Poslednjih 7 dana</h3>
+            <div class="history-list" *ngIf="mealHistory.length > 0; else noMeals">
+                <div class="history-row" *ngFor="let item of mealHistory">
+                    <span class="history-date">{{ formatShortDate(item.date) }}</span>
+                    <span class="history-value">{{ item.value }} obroka</span>
+                </div>
+            </div>
+            <ng-template #noMeals>
+                <div class="empty-state">
+                    <span class="empty-icon">🍎</span>
+                    <p>Nema unosa još.</p>
+                </div>
+            </ng-template>
         </div>
     </div>
 </div>

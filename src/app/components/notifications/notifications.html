@@ -57,14 +57,14 @@
           <div class="notification-actions">
             <button 
               class="icon-btn" 
-              (click)="markAsRead(notification.id)" 
+              (click)="markAsRead(notification.id!)" 
               *ngIf="!notification.read"
               title="Označi pročitano">
               ✓
             </button>
             <button 
               class="icon-btn delete" 
-              (click)="deleteNotification(notification.id)"
+              (click)="deleteNotification(notification.id!)"
               title="Obriši">
               🗑️
             </button>
@@ -138,7 +138,7 @@
                 <input 
                   type="checkbox" 
                   [checked]="reminder.enabled"
-                  (change)="toggleReminder(reminder.id)">
+                  (change)="toggleReminder(reminder.id!)">
                 <span class="slider"></span>
               </label>
             </div>
@@ -153,7 +153,7 @@
             </span>
             <button 
               class="icon-btn delete" 
-              (click)="deleteReminder(reminder.id)">
+              (click)="deleteReminder(reminder.id!)">
               🗑️
             </button>
           </div>
