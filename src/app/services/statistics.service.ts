@@ -29,9 +29,18 @@ export class StatisticsService {
     private authService: AuthService
   ) {}
 
+  private getFromLocalStorage(key: string): any {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const data = localStorage.getItem(key);
+      return data ? JSON.parse(data) : null;
+    }
+    return null;
+  }
+
   async getWeeklyData(endDateIso?: string): Promise<ProductivityData> {
     const user = this.authService.currentUserValue;
     if (!user) {
+      console.log('⚠️ No user logged in');
       return this.getEmptyData('week');
     }
 
@@ -42,24 +51,23 @@ export class StatisticsService {
     const startIso = this.formatIsoDate(startDate);
     const endIso = this.formatIsoDate(endDate);
 
-    // Get time entries for study hours
-    const timeEntriesQuery = query(
-      collection(this.firestore, 'timeEntries'),
-      where('userId', '==', user.id),
-      where('startTime', '>=', Timestamp.fromDate(startDate)),
-      where('startTime', '<=', Timestamp.fromDate(endDate))
-    );
+    console.log('📊 Statistics: Fetching data from', startIso, 'to', endIso);
 
-    const timeEntriesSnapshot = await getDocs(timeEntriesQuery);
-    const timeEntries: any[] = [];
-    timeEntriesSnapshot.forEach(doc => {
-      const data = doc.data();
-      timeEntries.push({
-        startTime: (data['startTime'] as Timestamp).toDate(),
-        duration: data['duration'] || 0,
-        category: data['category']
+    // Get time entries from localStorage
+    const storageKey = `timeEntries_${user.id}`;
+    const allTimeEntries = this.getFromLocalStorage(storageKey) || [];
+    const timeEntries: any[] = allTimeEntries
+      .map((entry: any) => ({
+        startTime: new Date(entry.startTime),
+        duration: entry.duration || 0,
+        category: entry.category
+      }))
+      .filter((entry: any) => {
+        const entryDate = entry.startTime;
+        return entryDate >= startDate && entryDate <= endDate;
       });
-    });
+    
+    console.log(`🕒 Found ${timeEntries.length} time entries`);
 
     // Fetch daily trackers (by ISO date string)
     const [sleepMap, studyMap, waterMap, exerciseMap, mealMap] = await Promise.all([
@@ -88,7 +96,19 @@ export class StatisticsService {
       studyHours.push(this.round1(studyMap.get(iso) ?? 0));
       waterGlasses.push(this.round1(waterMap.get(iso) ?? 0));
       exerciseMinutes.push(this.round1(exerciseMap.get(iso) ?? 0));
-      mealCount.push(this.round1(mealMap.get(iso) ?? 0));
+      mealCount.push(this.round1(mealMap.get(iso) ?? 0));      console.log(`📅 ${iso}:`, {
+        sleep: sleepMap.get(iso),
+        study: studyMap.get(iso),
+        water: waterMap.get(iso),
+        exercise: exerciseMap.get(iso),
+        meals: mealMap.get(iso)
+      });      console.log(`📅 ${iso}:`, {
+        sleep: sleepMap.get(iso),
+        study: studyMap.get(iso),
+        water: waterMap.get(iso),
+        exercise: exerciseMap.get(iso),
+        meals: mealMap.get(iso)
+      });
     }
 
     // Activity distribution
@@ -139,6 +159,7 @@ export class StatisticsService {
   async getMonthlyData(endDateIso?: string): Promise<ProductivityData> {
     const user = this.authService.currentUserValue;
     if (!user) {
+      console.log('⚠️ No user logged in');
       return this.getEmptyData('month');
     }
 
@@ -149,24 +170,21 @@ export class StatisticsService {
     const startIso = this.formatIsoDate(startDate);
     const endIso = this.formatIsoDate(endDate);
 
-    // Get time entries
-    const timeEntriesQuery = query(
-      collection(this.firestore, 'timeEntries'),
-      where('userId', '==', user.id),
-      where('startTime', '>=', Timestamp.fromDate(startDate)),
-      where('startTime', '<=', Timestamp.fromDate(endDate))
-    );
-
-    const timeEntriesSnapshot = await getDocs(timeEntriesQuery);
-    const timeEntries: any[] = [];
-    timeEntriesSnapshot.forEach(doc => {
-      const data = doc.data();
-      timeEntries.push({
-        startTime: (data['startTime'] as Timestamp).toDate(),
-        duration: data['duration'] || 0,
-        category: data['category']
+    // Get time entries from localStorage
+    const storageKey = `timeEntries_${user.id}`;
+    const allTimeEntries = this.getFromLocalStorage(storageKey) || [];
+    const timeEntries: any[] = allTimeEntries
+      .map((entry: any) => ({
+        startTime: new Date(entry.startTime),
+        duration: entry.duration || 0,
+        category: entry.category
+      }))
+      .filter((entry: any) => {
+        const entryDate = entry.startTime;
+        return entryDate >= startDate && entryDate <= endDate;
       });
-    });
+    
+    console.log(`🕒 Found ${timeEntries.length} time entries for monthly data`);
 
     const [sleepMap, studyMap, waterMap, exerciseMap, mealMap] = await Promise.all([
       this.getDailyValueMap('sleepTracking', user.id, startIso, endIso, 'value'),
@@ -324,23 +342,21 @@ export class StatisticsService {
     endIso: string,
     valueField: string
   ): Promise<Map<string, number>> {
-    const q = query(
-      collection(this.firestore, collectionName),
-      where('userId', '==', userId),
-      where('date', '>=', startIso),
-      where('date', '<=', endIso)
-    );
-
-    const snapshot = await getDocs(q);
+    console.log(`📦 Fetching ${collectionName} for user ${userId} from ${startIso} to ${endIso}`);
+    
+    const storageKey = `${collectionName}_${userId}`;
+    const allData = this.getFromLocalStorage(storageKey) || {};
     const result = new Map<string, number>();
 
-    snapshot.forEach((d) => {
-      const data: any = d.data();
-      const date = String(data['date'] || '');
-      if (!date) return;
-      result.set(date, Number(data[valueField] || 0));
+    Object.keys(allData).forEach(date => {
+      if (date >= startIso && date <= endIso) {
+        const value = valueField === 'glasses' ? allData[date].glasses : allData[date].value;
+        result.set(date, Number(value || 0));
+        console.log(`  ✅ ${date}: ${value}`);
+      }
     });
 
+    console.log(`📦 ${collectionName}: Found ${result.size} records`);
     return result;
   }
 }

@@ -1,4 +1,4 @@
-import { Component, PLATFORM_ID, Inject } from '@angular/core';
+import { Component, PLATFORM_ID, Inject, ChangeDetectorRef, NgZone, signal } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Firestore, collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc, Timestamp } from '@angular/fire/firestore';
@@ -22,6 +22,7 @@ interface GraphCell {
   date: string;
   glasses: number;
   level: number;
+  isToday?: boolean;
 }
 
 interface MonthLabel {
@@ -47,7 +48,7 @@ interface TimeEntry {
   styleUrl: './trackers.css'
 })
 export class Trackers {
-  private readonly WEEKS_TO_SHOW = 12;
+  private readonly WEEKS_TO_SHOW = 13; // Show 3 months
   readonly TIME_ADJUST_STEP_MINUTES = 5;
   
   showWaterModal = false;
@@ -85,25 +86,35 @@ export class Trackers {
   // Timer data
   timeEntries: TimeEntry[] = [];
   activeEntry: TimeEntry | null = null;
-  currentElapsedTime = '00:00:00';
+  currentElapsedTime = signal<string>('00:00:00');
   timerInterval: any;
 
   // New entry form
   newEntryTitle = '';
   newEntryCategory: 'study' | 'work' | 'exercise' | 'other' = 'study';
 
-  private waterUnsubscribe: any;
-  private timerUnsubscribe: any;
-  private exerciseUnsubscribe: any;
-  private sleepUnsubscribe: any;
-  private studyUnsubscribe: any;
-  private mealUnsubscribe: any;
-
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
     private firestore: Firestore,
-    private authService: AuthService
+    private authService: AuthService,
+    private ngZone: NgZone,
+    private cdr: ChangeDetectorRef
   ) {}
+
+  // LocalStorage helpers
+  private saveToLocalStorage(key: string, data: any) {
+    if (isPlatformBrowser(this.platformId)) {
+      localStorage.setItem(key, JSON.stringify(data));
+    }
+  }
+
+  private getFromLocalStorage(key: string): any {
+    if (isPlatformBrowser(this.platformId)) {
+      const data = localStorage.getItem(key);
+      return data ? JSON.parse(data) : null;
+    }
+    return null;
+  }
 
   ngOnInit() {
     if (isPlatformBrowser(this.platformId)) {
@@ -131,16 +142,7 @@ export class Trackers {
             this.mealHistory = this.getRecentHistory(this.mealDataMap);
           });
         } else {
-          // Unsubscribe from previous listeners
-          if (this.waterUnsubscribe) this.waterUnsubscribe();
-          if (this.timerUnsubscribe) this.timerUnsubscribe();
-          if (this.exerciseUnsubscribe) this.exerciseUnsubscribe();
-          if (this.sleepUnsubscribe) this.sleepUnsubscribe();
-          if (this.studyUnsubscribe) this.studyUnsubscribe();
-          if (this.mealUnsubscribe) this.mealUnsubscribe();
-          
-          this.waterDataMap.clear();
-          this.timeEntries = [];
+        // User logged out - clear data
           this.activeEntry = null;
           this.exerciseDataMap.clear();
           this.sleepDataMap.clear();
@@ -167,36 +169,15 @@ export class Trackers {
     targetMap: Map<string, DailyMetricData>,
     onUpdated: () => void
   ) {
-    const q = query(collection(this.firestore, collectionName), where('userId', '==', userId));
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      targetMap.clear();
-      snapshot.forEach((d) => {
-        const data: any = d.data();
-        targetMap.set(data['date'], {
-          id: d.id,
-          userId: data['userId'],
-          date: data['date'],
-          value: Number(data['value'] || 0)
-        });
-      });
-      onUpdated();
+    const storageKey = `${collectionName}_${userId}`;
+    const data = this.getFromLocalStorage(storageKey) || {};
+    
+    targetMap.clear();
+    Object.keys(data).forEach(date => {
+      targetMap.set(date, data[date]);
     });
-
-    switch (collectionName) {
-      case 'exerciseTracking':
-        this.exerciseUnsubscribe = unsubscribe;
-        break;
-      case 'sleepTracking':
-        this.sleepUnsubscribe = unsubscribe;
-        break;
-      case 'studyTracking':
-        this.studyUnsubscribe = unsubscribe;
-        break;
-      case 'mealTracking':
-        this.mealUnsubscribe = unsubscribe;
-        break;
-    }
+    
+    onUpdated();
   }
 
   private getRecentHistory(map: Map<string, DailyMetricData>): Array<{ date: string; value: number }> {
@@ -216,55 +197,33 @@ export class Trackers {
   }
 
   private loadUserWaterData(userId: string) {
-    const q = query(
-      collection(this.firestore, 'waterTracking'),
-      where('userId', '==', userId)
-    );
-
-    this.waterUnsubscribe = onSnapshot(q, (snapshot) => {
-      this.waterDataMap.clear();
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        this.waterDataMap.set(data['date'], {
-          id: doc.id,
-          userId: data['userId'],
-          date: data['date'],
-          glasses: data['glasses']
-        });
-      });
-      
-      this.updateTodayCount();
-      this.renderGraph();
-      this.updateStats();
+    // Load from localStorage
+    const storageKey = `waterTracking_${userId}`;
+    const data = this.getFromLocalStorage(storageKey) || {};
+    
+    this.waterDataMap.clear();
+    Object.keys(data).forEach(date => {
+      this.waterDataMap.set(date, data[date]);
     });
+    
+    this.updateTodayCount();
+    this.renderGraph();
+    this.updateStats();
   }
 
   private loadUserTimeEntries(userId: string) {
-    const q = query(
-      collection(this.firestore, 'timeEntries'),
-      where('userId', '==', userId)
-    );
-
-    this.timerUnsubscribe = onSnapshot(q, (snapshot) => {
-      this.timeEntries = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        this.timeEntries.push({
-          id: doc.id,
-          userId: data['userId'],
-          title: data['title'],
-          category: data['category'],
-          startTime: (data['startTime'] as Timestamp).toDate(),
-          endTime: data['endTime'] ? (data['endTime'] as Timestamp).toDate() : undefined,
-          duration: data['duration'],
-          isRunning: data['isRunning']
-        });
-      });
-      
-      // Sort by start time descending
-      this.timeEntries.sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
-      this.checkForActiveTimer();
-    });
+    const storageKey = `timeEntries_${userId}`;
+    const data = this.getFromLocalStorage(storageKey) || [];
+    
+    this.timeEntries = data.map((entry: any) => ({
+      ...entry,
+      startTime: new Date(entry.startTime),
+      endTime: entry.endTime ? new Date(entry.endTime) : undefined
+    }));
+    
+    // Sort by start time descending
+    this.timeEntries.sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
+    this.checkForActiveTimer();
   }
 
   private checkForActiveTimer() {
@@ -272,6 +231,7 @@ export class Trackers {
     if (this.activeEntry) {
       this.startTimerInterval();
     }
+    this.cdr.detectChanges();
   }
 
   async startNewTimer() {
@@ -291,7 +251,8 @@ export class Trackers {
       await this.stopTimer(this.activeEntry.id);
     }
 
-    const entry: Omit<TimeEntry, 'id'> = {
+    const entry: TimeEntry = {
+      id: Date.now().toString(),
       userId: user.id,
       title: this.newEntryTitle,
       category: this.newEntryCategory,
@@ -299,10 +260,12 @@ export class Trackers {
       isRunning: true
     };
 
-    await addDoc(collection(this.firestore, 'timeEntries'), {
-      ...entry,
-      startTime: Timestamp.fromDate(entry.startTime)
-    });
+    this.timeEntries.unshift(entry);
+    
+    const storageKey = `timeEntries_${user.id}`;
+    this.saveToLocalStorage(storageKey, this.timeEntries);
+    
+    this.checkForActiveTimer();
 
     // Reset form
     this.newEntryTitle = '';
@@ -310,24 +273,33 @@ export class Trackers {
   }
 
   async stopTimer(entryId: string) {
+    const user = this.authService.currentUserValue;
+    if (!user) return;
+    
     const entry = this.timeEntries.find(e => e.id === entryId);
     if (!entry || !entry.isRunning || !entry.id) return;
 
     const endTime = new Date();
     const duration = endTime.getTime() - entry.startTime.getTime();
 
-    await updateDoc(doc(this.firestore, 'timeEntries', entry.id), {
-      endTime: Timestamp.fromDate(endTime),
-      duration: duration,
-      isRunning: false
-    });
+    entry.endTime = endTime;
+    entry.duration = duration;
+    entry.isRunning = false;
+    
+    const storageKey = `timeEntries_${user.id}`;
+    this.saveToLocalStorage(storageKey, this.timeEntries);
 
     if (this.activeEntry?.id === entryId) {
       this.stopTimerInterval();
+      this.activeEntry = null;
     }
+    this.cdr.detectChanges();
   }
 
   async resumeTimer(entryId: string) {
+    const user = this.authService.currentUserValue;
+    if (!user) return;
+    
     // Stop any active timer first
     if (this.activeEntry && this.activeEntry.id) {
       await this.stopTimer(this.activeEntry.id);
@@ -342,29 +314,40 @@ export class Trackers {
     // Set new start time adjusted for previous duration
     const newStartTime = new Date(Date.now() - previousDuration);
 
-    await updateDoc(doc(this.firestore, 'timeEntries', entry.id), {
-      startTime: Timestamp.fromDate(newStartTime),
-      endTime: null,
-      duration: null,
-      isRunning: true
-    });
+    entry.startTime = newStartTime;
+    entry.endTime = undefined;
+    entry.duration = undefined;
+    entry.isRunning = true;
+    
+    const storageKey = `timeEntries_${user.id}`;
+    this.saveToLocalStorage(storageKey, this.timeEntries);
+    
+    this.checkForActiveTimer();
   }
 
   async deleteEntry(entryId: string) {
+    const user = this.authService.currentUserValue;
+    if (!user) return;
+    
     if (confirm('Da li ste sigurni da želite obrisati ovaj unos?')) {
       if (this.activeEntry?.id === entryId) {
         await this.stopTimer(entryId);
       }
-      await deleteDoc(doc(this.firestore, 'timeEntries', entryId));
+      
+      this.timeEntries = this.timeEntries.filter(e => e.id !== entryId);
+      
+      const storageKey = `timeEntries_${user.id}`;
+      this.saveToLocalStorage(storageKey, this.timeEntries);
     }
   }
 
   private startTimerInterval() {
     this.stopTimerInterval(); // Clear any existing interval
     this.updateElapsedTime();
+    
     this.timerInterval = setInterval(() => {
       this.updateElapsedTime();
-    }, 1000);
+    }, 100); // Update every 100ms for smoother display
   }
 
   private stopTimerInterval() {
@@ -376,12 +359,12 @@ export class Trackers {
 
   private updateElapsedTime() {
     if (!this.activeEntry) {
-      this.currentElapsedTime = '00:00:00';
+      this.currentElapsedTime.set('00:00:00');
       return;
     }
 
     const elapsed = Date.now() - this.activeEntry.startTime.getTime();
-    this.currentElapsedTime = this.formatDuration(elapsed);
+    this.currentElapsedTime.set(this.formatDuration(elapsed));
   }
 
   async increaseActiveTime() {
@@ -393,6 +376,9 @@ export class Trackers {
   }
 
   private async adjustActiveTimerByMinutes(deltaMinutes: number) {
+    const user = this.authService.currentUserValue;
+    if (!user) return;
+    
     const entry = this.activeEntry;
     if (!entry?.id || !entry.isRunning) return;
 
@@ -413,11 +399,12 @@ export class Trackers {
     }
 
     const newStartTime = new Date(newStartTimeMs);
-    await updateDoc(doc(this.firestore, 'timeEntries', entry.id), {
-      startTime: Timestamp.fromDate(newStartTime)
-    });
+    entry.startTime = newStartTime;
+    
+    const storageKey = `timeEntries_${user.id}`;
+    this.saveToLocalStorage(storageKey, this.timeEntries);
 
-    // optimistic UI update (snapshot will reconcile)
+    // optimistic UI update
     this.activeEntry = { ...entry, startTime: newStartTime };
     this.updateElapsedTime();
   }
@@ -501,27 +488,9 @@ export class Trackers {
 
   ngOnDestroy() {
     this.stopTimerInterval();
-    if (this.waterUnsubscribe) {
-      this.waterUnsubscribe();
-    }
-    if (this.timerUnsubscribe) {
-      this.timerUnsubscribe();
-    }
-    if (this.exerciseUnsubscribe) {
-      this.exerciseUnsubscribe();
-    }
-    if (this.sleepUnsubscribe) {
-      this.sleepUnsubscribe();
-    }
-    if (this.studyUnsubscribe) {
-      this.studyUnsubscribe();
-    }
-    if (this.mealUnsubscribe) {
-      this.mealUnsubscribe();
-    }
   }
 
-  private getTodayDate(): string {
+  getTodayDate(): string {
     const today = new Date();
     return this.formatDate(today);
   }
@@ -594,15 +563,33 @@ export class Trackers {
       return;
     }
 
-    const existing = map.get(date);
-    if (existing?.id) {
-      await updateDoc(doc(this.firestore, collectionName, existing.id), { value });
-    } else {
-      await addDoc(collection(this.firestore, collectionName), {
-        userId: user.id,
-        date,
-        value
-      });
+    const newData = {
+      id: date,
+      userId: user.id,
+      date,
+      value
+    };
+    
+    map.set(date, newData);
+    
+    const storageKey = `${collectionName}_${user.id}`;
+    const allData = this.getFromLocalStorage(storageKey) || {};
+    allData[date] = newData;
+    this.saveToLocalStorage(storageKey, allData);
+    
+    // Update the appropriate today value
+    if (collectionName === 'exerciseTracking') {
+      this.updateTodayExercise();
+      this.exerciseHistory = this.getRecentHistory(this.exerciseDataMap);
+    } else if (collectionName === 'sleepTracking') {
+      this.updateTodaySleep();
+      this.sleepHistory = this.getRecentHistory(this.sleepDataMap);
+    } else if (collectionName === 'studyTracking') {
+      this.updateTodayStudy();
+      this.studyHistory = this.getRecentHistory(this.studyDataMap);
+    } else if (collectionName === 'mealTracking') {
+      this.updateTodayMeals();
+      this.mealHistory = this.getRecentHistory(this.mealDataMap);
     }
   }
 
@@ -663,17 +650,23 @@ export class Trackers {
     const current = waterData?.glasses || 0;
     
     if (current < 20) {
-      if (waterData && waterData.id) {
-        await updateDoc(doc(this.firestore, 'waterTracking', waterData.id), {
-          glasses: current + 1
-        });
-      } else {
-        await addDoc(collection(this.firestore, 'waterTracking'), {
-          userId: user.id,
-          date: today,
-          glasses: current + 1
-        });
-      }
+      const newData = {
+        id: waterData?.id || today,
+        userId: user.id,
+        date: today,
+        glasses: current + 1
+      };
+      this.waterDataMap.set(today, newData);
+      
+      // Save all water data to localStorage
+      const storageKey = `waterTracking_${user.id}`;
+      const allData = this.getFromLocalStorage(storageKey) || {};
+      allData[today] = newData;
+      this.saveToLocalStorage(storageKey, allData);
+      
+      this.updateTodayCount();
+      this.renderGraph();
+      this.updateStats();
     }
   }
 
@@ -685,24 +678,45 @@ export class Trackers {
     const waterData = this.waterDataMap.get(today);
     const current = waterData?.glasses || 0;
     
-    if (current > 0 && waterData && waterData.id) {
-      await updateDoc(doc(this.firestore, 'waterTracking', waterData.id), {
+    if (current > 0) {
+      const newData = {
+        id: waterData?.id || today,
+        userId: user.id,
+        date: today,
         glasses: current - 1
-      });
+      };
+      this.waterDataMap.set(today, newData);
+      
+      const storageKey = `waterTracking_${user.id}`;
+      const allData = this.getFromLocalStorage(storageKey) || {};
+      allData[today] = newData;
+      this.saveToLocalStorage(storageKey, allData);
+      
+      this.updateTodayCount();
+      this.renderGraph();
+      this.updateStats();
     }
   }
 
   private generateDates(): Date[] {
     const dates: Date[] = [];
     const today = new Date();
-    const totalDays = this.WEEKS_TO_SHOW * 7;
+    today.setHours(0, 0, 0, 0);
     
-    for (let i = totalDays - 1; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      dates.push(date);
+    // Go back exactly 3 months
+    const startDate = new Date(today);
+    startDate.setMonth(today.getMonth() - 3);
+    startDate.setHours(0, 0, 0, 0);
+    
+    // Generate all dates from startDate to today
+    const currentDate = new Date(startDate);
+    while (currentDate <= today) {
+      dates.push(new Date(currentDate));
+      currentDate.setDate(currentDate.getDate() + 1);
     }
     
+    console.log('📅 Generated', dates.length, 'dates from', this.formatDate(dates[0]), 'to', this.formatDate(dates[dates.length - 1]));
+    console.log('📅 Today is:', this.formatDate(today));
     return dates;
   }
 
@@ -710,22 +724,34 @@ export class Trackers {
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Maj', 'Jun', 'Jul', 'Avg', 'Sep', 'Okt', 'Nov', 'Dec'];
     const labels: MonthLabel[] = [];
     let lastMonth = -1;
-    let weekCount = 0;
-
-    dates.forEach((date, index) => {
-      if (date.getDay() === 0 || index === 0) {
-        const month = date.getMonth();
-        if (month !== lastMonth) {
-          labels.push({
-            text: monthNames[month],
-            position: weekCount
-          });
-          lastMonth = month;
-        }
-        weekCount++;
+    let currentWeek = 0;
+    
+    // Iterate through dates and track weeks
+    for (let i = 0; i < dates.length; i++) {
+      const date = dates[i];
+      const month = date.getMonth();
+      
+      // Calculate which week this date belongs to (0-indexed)
+      const weekNumber = Math.floor(i / 7);
+      
+      // When we hit a new week
+      if (weekNumber > currentWeek) {
+        currentWeek = weekNumber;
       }
-    });
+      
+      // When we hit a new month at the START of a date (not necessarily start of week)
+      if (month !== lastMonth) {
+        labels.push({
+          text: monthNames[month],
+          position: weekNumber
+        });
+        lastMonth = month;
+        console.log(`📅 Month ${monthNames[month]} starts at week ${weekNumber} (date index ${i}: ${this.formatDate(date)})`);
+      }
+    }
 
+    console.log('📅 Total weeks:', Math.ceil(dates.length / 7));
+    console.log('📅 Month labels:', labels);
     return labels;
   }
 
@@ -733,6 +759,9 @@ export class Trackers {
     const dates = this.generateDates();
     this.monthLabels = this.getMonthLabels(dates);
     this.graphCells = [];
+    const today = this.getTodayDate();
+
+    console.log('📊 Rendering graph with', dates.length, 'dates');
 
     dates.forEach(date => {
       const dateStr = this.formatDate(date);
@@ -743,9 +772,12 @@ export class Trackers {
       this.graphCells.push({
         date: dateStr,
         glasses: glasses,
-        level: level
+        level: level,
+        isToday: dateStr === today
       });
     });
+
+    console.log('📊 Graph cells created:', this.graphCells.length, 'Today:', today);
   }
 
   private updateStats() {
@@ -801,17 +833,22 @@ export class Trackers {
       if (count >= 0 && count <= 20) {
         const waterData = this.waterDataMap.get(date);
         
-        if (waterData && waterData.id) {
-          await updateDoc(doc(this.firestore, 'waterTracking', waterData.id), {
-            glasses: count
-          });
-        } else {
-          await addDoc(collection(this.firestore, 'waterTracking'), {
-            userId: user.id,
-            date: date,
-            glasses: count
-          });
-        }
+        const newData = {
+          id: waterData?.id || date,
+          userId: user.id,
+          date: date,
+          glasses: count
+        };
+        
+        this.waterDataMap.set(date, newData);
+        
+        const storageKey = `waterTracking_${user.id}`;
+        const allData = this.getFromLocalStorage(storageKey) || {};
+        allData[date] = newData;
+        this.saveToLocalStorage(storageKey, allData);
+        
+        this.renderGraph();
+        this.updateStats();
       }
     }
   }

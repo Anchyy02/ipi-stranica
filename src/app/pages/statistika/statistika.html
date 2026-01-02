@@ -7,20 +7,26 @@
     </button>
   </div>
 
-  <!-- Filter -->
-  <div class="filter-section">
-    <div class="filter-group">
-      <label>Period:</label>
-      <select [(ngModel)]="filterPeriod" (change)="onFilterChange()">
-        <option value="week">Sedmica</option>
-        <option value="month">Mjesec</option>
-      </select>
-    </div>
-    <div class="filter-group">
-      <label>Datum:</label>
-      <input type="date" [(ngModel)]="selectedDate" (change)="onFilterChange()">
-    </div>
+  <!-- Loading indicator -->
+  <div *ngIf="loading" style="text-align: center; padding: 40px;">
+    <p>Učitavanje podataka...</p>
   </div>
+
+  <div *ngIf="!loading">
+    <!-- Filter -->
+    <div class="filter-section">
+      <div class="filter-group">
+        <label>Period:</label>
+        <select [(ngModel)]="filterPeriod" (change)="onFilterChange()">
+          <option value="week">Sedmica</option>
+          <option value="month">Mjesec</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Datum:</label>
+        <input type="date" [(ngModel)]="selectedDate" (change)="onFilterChange()">
+      </div>
+    </div>
 
   <!-- Stats Overview -->
   <div class="stats-overview">
@@ -208,24 +214,28 @@
 
     <!-- Comparison Chart -->
     <div class="chart-card comparison-card">
-      <h3>📈 Poređenje napredka</h3>
+      <h3>📈 Produktivnost</h3>
       <div class="comparison-container">
         <div class="comparison-row">
-          <span class="comparison-label">Ova sedmica:</span>
+          <span class="comparison-label">Produktivnost:</span>
           <div class="progress-bar">
-            <div class="progress-fill" [style.width]="'75%'"></div>
+            <div class="progress-fill" [style.width]="stats.productivityScore + '%'"></div>
           </div>
-          <span class="comparison-value">75%</span>
+          <span class="comparison-value">{{ stats.productivityScore }}%</span>
         </div>
         <div class="comparison-row">
-          <span class="comparison-label">Prošla sedmica:</span>
+          <span class="comparison-label">Učenje (avg):</span>
           <div class="progress-bar">
-            <div class="progress-fill gray" [style.width]="'65%'"></div>
+            <div class="progress-fill" [style.width]="(stats.avgStudy / 10 * 100) + '%'"></div>
           </div>
-          <span class="comparison-value">65%</span>
+          <span class="comparison-value">{{ stats.avgStudy }}h</span>
         </div>
-        <div class="comparison-improvement">
-          <span class="improvement-badge positive">↑ +10% poboljšanje</span>
+        <div class="comparison-row">
+          <span class="comparison-label">Spavanje (avg):</span>
+          <div class="progress-bar">
+            <div class="progress-fill" [style.width]="(stats.avgSleep / 10 * 100) + '%'"></div>
+          </div>
+          <span class="comparison-value">{{ stats.avgSleep }}h</span>
         </div>
       </div>
     </div>
@@ -251,5 +261,6 @@
         <p>{{ getAIProductivityInsight() }}</p>
       </div>
     </div>
+  </div>
   </div>
 </div>

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { StatisticsService } from '../../services/statistics.service';
@@ -74,16 +74,33 @@ export class StatistikaComponent implements OnInit {
 
   constructor(
     private statisticsService: StatisticsService,
-    private authService: AuthService
+    private authService: AuthService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
-    // Listen to auth state
+    console.log('📊 Statistika ngOnInit called');
+    
+    // Immediate check for current user
+    const currentUser = this.authService.currentUserValue;
+    console.log('📊 Current user:', currentUser);
+    
+    if (currentUser) {
+      console.log('📊 User is logged in, loading data immediately');
+      this.loadData();
+    } else {
+      console.log('📊 No user logged in');
+      this.loading = false;
+    }
+    
+    // Also listen to auth state changes
     this.authService.currentUser.subscribe(user => {
+      console.log('📊 Auth state changed:', user ? 'User logged in' : 'User logged out');
       if (user) {
         this.loadData();
       } else {
         this.resetData();
+        this.loading = false;
       }
     });
   }
@@ -108,7 +125,11 @@ export class StatistikaComponent implements OnInit {
   }
 
   async loadData() {
+    console.log('📊 Loading data for period:', this.filterPeriod, 'date:', this.selectedDate);
     this.loading = true;
+    // In zoneless/SSR hydration scenarios, async work may not trigger a render.
+    // Force the loading indicator to appear immediately.
+    this.cdr.detectChanges();
     try {
       if (this.filterPeriod === 'week') {
         await this.loadWeekData();
@@ -116,67 +137,97 @@ export class StatistikaComponent implements OnInit {
         await this.loadMonthData();
       }
       this.calculateStats();
+      console.log('📊 Data loaded successfully. Stats:', this.stats);
+      console.log('📊 Sleep data:', this.sleepData);
+      console.log('📊 Study data:', this.studyData);
+      console.log('📊 Water data:', this.waterData);
+      console.log('📊 Exercise data:', this.exerciseData);
+      console.log('📊 Meal data:', this.mealData);
     } catch (error) {
-      console.error('Error loading statistics:', error);
+      console.error('❌ Error loading statistics:', error);
+      alert('Greška prilikom učitavanja statistike. Pogledajte konzolu za detalje.');
     } finally {
+      console.log('📊 Setting loading to false');
       this.loading = false;
+      // Force the freshly loaded stats/charts to render without requiring a click.
+      this.cdr.detectChanges();
     }
   }
 
   async loadWeekData() {
-    const data = await this.statisticsService.getWeeklyData(this.selectedDate);
-    this.sleepData = {
-      labels: data.labels,
-      data: data.sleepHours
-    };
-    this.studyData = {
-      labels: data.labels,
-      data: data.studyHours
-    };
-    this.waterData = {
-      labels: data.labels,
-      data: data.waterGlasses
-    };
-    this.exerciseData = {
-      labels: data.labels,
-      data: data.exerciseMinutes
-    };
-    this.mealData = {
-      labels: data.labels,
-      data: data.mealCount
-    };
-    this.updateActivityData(data.activityDistribution);
+    try {
+      console.log('📊 loadWeekData called with selectedDate:', this.selectedDate);
+      const data = await this.statisticsService.getWeeklyData(this.selectedDate);
+      console.log('📊 Week data received:', data);
+      
+      this.sleepData = {
+        labels: data.labels,
+        data: data.sleepHours
+      };
+      this.studyData = {
+        labels: data.labels,
+        data: data.studyHours
+      };
+      this.waterData = {
+        labels: data.labels,
+        data: data.waterGlasses
+      };
+      this.exerciseData = {
+        labels: data.labels,
+        data: data.exerciseMinutes
+      };
+      this.mealData = {
+        labels: data.labels,
+        data: data.mealCount
+      };
+      this.updateActivityData(data.activityDistribution);
 
-    this.stats.totalStudyTime = data.totalStudyTimeHours;
-    this.stats.totalTimerTime = data.totalTimerHours;
+      this.stats.totalStudyTime = data.totalStudyTimeHours;
+      this.stats.totalTimerTime = data.totalTimerHours;
+      
+      console.log('📊 Week data loaded successfully');
+    } catch (error) {
+      console.error('❌ Error in loadWeekData:', error);
+      throw error;
+    }
   }
 
   async loadMonthData() {
-    const data = await this.statisticsService.getMonthlyData(this.selectedDate);
-    this.sleepData = {
-      labels: data.labels,
-      data: data.sleepHours
-    };
-    this.studyData = {
-      labels: data.labels,
-      data: data.studyHours
-    };
-    this.waterData = {
-      labels: data.labels,
-      data: data.waterGlasses
-    };
-    this.exerciseData = {
-      labels: data.labels,
-      data: data.exerciseMinutes
-    };
-    this.mealData = {
-      labels: data.labels,
-      data: data.mealCount
-    };
-    this.updateActivityData(data.activityDistribution);
+    try {
+      console.log('📊 loadMonthData called with selectedDate:', this.selectedDate);
+      const data = await this.statisticsService.getMonthlyData(this.selectedDate);
+      console.log('📊 Month data received:', data);
+      
+      this.sleepData = {
+        labels: data.labels,
+        data: data.sleepHours
+      };
+      this.studyData = {
+        labels: data.labels,
+        data: data.studyHours
+      };
+      this.waterData = {
+        labels: data.labels,
+        data: data.waterGlasses
+      };
+      this.exerciseData = {
+        labels: data.labels,
+        data: data.exerciseMinutes
+      };
+      this.mealData = {
+        labels: data.labels,
+        data: data.mealCount
+      };
+      this.updateActivityData(data.activityDistribution);
 
-    this.stats.totalStudyTime = data.totalStudyTimeHours;
-    this.stats.totalTimerTime = data.totalTimerHours;
+      this.stats.totalStudyTime = data.totalStudyTimeHours;
+      this.stats.totalTimerTime = data.totalTimerHours;
+      
+      console.log('📊 Month data loaded successfully');
+    } catch (error) {
+      console.error('❌ Error in loadMonthData:', error);
+      throw error;
+    }
   }
 
   private updateActivityData(distribution: { study: number; sleep: number; rest: number; other: number }) {
@@ -218,8 +269,11 @@ export class StatistikaComponent implements OnInit {
   getLinePoints(): string {
     const width = 600;
     const height = 200;
-    const max = Math.max(...this.studyData.data);
-    const stepX = width / (this.studyData.data.length - 1);
+    if (!this.studyData.data || this.studyData.data.length === 0) {
+      return '';
+    }
+    const max = Math.max(...this.studyData.data, 1); // Min 1 to avoid division by zero
+    const stepX = width / (this.studyData.data.length - 1 || 1);
     
     return this.studyData.data
       .map((val, i) => `${i * stepX},${height - (val / max) * height}`)
@@ -228,6 +282,9 @@ export class StatistikaComponent implements OnInit {
 
   getPieSlices(): any[] {
     const total = this.activityData.data.reduce((a, b) => a + b, 0);
+    if (total === 0) {
+      return [];
+    }
     let currentAngle = 0;
     
     return this.activityData.data.map((value, index) => {
@@ -256,7 +313,9 @@ export class StatistikaComponent implements OnInit {
 
   getAISleepInsight(): string {
     const avgSleep = this.stats.avgSleep;
-    if (avgSleep < 6) {
+    if (avgSleep === 0) {
+      return "Nema podataka o spavanju. Počnite pratiti svoje navike spavanja u Trackers sekciji!";
+    } else if (avgSleep < 6) {
       return "Spavate premalo! Preporučuje se 7-9 sati sna za optimalnu produktivnost.";
     } else if (avgSleep >= 6 && avgSleep < 7) {
       return "Vaše spavanje je ispod optimalnog nivoa. Pokušajte dodati još sat vremena za spavanje.";
@@ -269,20 +328,24 @@ export class StatistikaComponent implements OnInit {
 
   getAIStudyInsight(): string {
     const avgStudy = this.stats.avgStudy;
-    if (avgStudy < 3) {
+    if (avgStudy === 0) {
+      return "Nema podataka o učenju. Počnite pratiti svoje vrijeme učenja u Trackers sekciji!";
+    } else if (avgStudy < 3) {
       return "Vrijeme učenja je ispod prosjeka. Pokušajte povećati na najmanje 4-5 sati dnevno.";
     } else if (avgStudy >= 3 && avgStudy < 5) {
       return "Dobro napredujete! Malo više fokusa bi vas dovelo do izvrsnosti.";
     } else if (avgStudy >= 5 && avgStudy < 7) {
       return "Odličan napredak! Održavate savršen balans učenja i odmora.";
     } else {
-      return "Učite mnogo! Pazite da ne dođete do pregorelosti. Pravi­te pauze.";
+      return "Učite mnogo! Pazite da ne dođete do pregorelosti. Pravite pauze.";
     }
   }
 
   getAIProductivityInsight(): string {
     const score = this.stats.productivityScore;
-    if (score < 40) {
+    if (score === 0) {
+      return "Počnite da pratite svoje aktivnosti kako biste vidjeli svoju produktivnost. Idite na Trackers stranicu!";
+    } else if (score < 40) {
       return "Vaša produktivnost je niska. Razmislite o organizovanju vremena i postavljanju ciljeva.";
     } else if (score >= 40 && score < 70) {
       return "Dobra produktivnost! Sa malim poboljšanjima možete postići još više.";

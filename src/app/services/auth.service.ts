@@ -131,8 +131,10 @@ export class AuthService {
 
   public async logout(): Promise<void> {
     if (isPlatformBrowser(this.platformId)) {
+      // Do NOT clear localStorage here: tracker/statistics data is stored there and
+      // must persist across logout/login.
+      // Clearing sessionStorage is fine (used for ephemeral UI flags like redirects).
       sessionStorage.clear();
-      localStorage.clear();
     }
     await signOut(this.auth);
     this.emitUser(null);
