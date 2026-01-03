@@ -10,6 +10,9 @@
     --primary-50: #e8f1ff;  /* subtle focus ring */
     --border: #e5e7eb;
     --shadow: 0 8px 24px rgba(16, 24, 40, 0.08);
+    --bg-gradient-start: #f9fafb;
+    --table-header-bg: #eaf3ff;
+    --surface-muted: #f9fafb;
     --radius: 14px;
     --space-1: 4px;
     --space-2: 8px;
@@ -19,6 +22,15 @@
     --space-6: 24px;
     --space-7: 28px;
     --space-8: 32px;
+
+    /* Hint native controls (select/options) to use light UI */
+    color-scheme: light;
+}
+
+:root[data-theme="dark"],
+:root[data-theme="cyberpunk"],
+:root.dark-mode {
+    color-scheme: dark;
 }
 
 
@@ -29,7 +41,7 @@ body {
     font-size: 16px;
     line-height: 1.65;
     color: var(--text);
-    background: linear-gradient(180deg, #f9fafb 0%, var(--bg) 100%);
+    background: linear-gradient(180deg, var(--bg-gradient-start) 0%, var(--bg) 100%);
     font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -151,7 +163,7 @@ table {
     width: 100%;
     border-collapse: collapse; 
     margin: var(--space-6) 0; 
-    background: #fff;
+    background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 10px;
     overflow: hidden;
@@ -163,8 +175,8 @@ th, td {
 }
 th {
     text-align: left;
-    color: #374151;
-    background: #eaf3ff;
+    color: var(--text);
+    background: var(--table-header-bg);
 }
 tr:nth-child(odd) td { background: #fafafa; }
 td:nth-child(4) { text-align: right; padding-right: 10px; }
@@ -179,7 +191,7 @@ fieldset {
     margin: 0 0 var(--space-5) 0;
     border: 1px solid var(--border);
     border-radius: 12px;
-    background: #f9fafb;
+    background: var(--surface-muted);
 }
 fieldset legend { color: var(--primary); font-weight: 700; padding: 0 var(--space-2); }
 label { display: inline-block; width: 30%; color: #374151; margin-bottom: var(--space-2); }
@@ -191,8 +203,13 @@ select, input[type=text], input[type=email], textarea {
     padding: 10px 12px;
     border: 1px solid var(--border);
     border-radius: 10px;
-    background: #fff;
+    background: var(--surface);
     transition: border-color .2s ease, box-shadow .2s ease;
+}
+
+select option {
+    background: var(--surface);
+    color: var(--text);
 }
 select:focus, input[type=text]:focus, input[type=email]:focus, textarea:focus {
     outline: none;

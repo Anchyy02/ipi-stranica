@@ -9,6 +9,9 @@
     --primary-50: #e8f1ff;
     --border: #e5e7eb;
     --shadow: 0 8px 24px rgba(16, 24, 40, 0.08);
+    --bg-gradient-start: #f9fafb;
+    --table-header-bg: #eaf3ff;
+    --surface-muted: #f9fafb;
     --radius: 14px;
     --space-1: 4px;
     --space-2: 8px;
@@ -18,6 +21,16 @@
     --space-6: 24px;
     --space-7: 28px;
     --space-8: 32px;
+
+    /* Hint native controls (select/options) to use light UI */
+    color-scheme: light;
+}
+
+:root[data-theme="dark"],
+:root[data-theme="cyberpunk"],
+:root.dark-mode {
+    /* Ensure native form controls have proper contrast in dark-ish themes */
+    color-scheme: dark;
 }
 
 /* Dark Mode Variables */
@@ -31,6 +44,9 @@
     --primary-50: #1e3a5f;
     --border: #404040;
     --shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    --bg-gradient-start: #0f0f0f;
+    --table-header-bg: #1e3a5f;
+    --surface-muted: #1f1f1f;
 }
 
 :root.dark-mode body {
@@ -44,7 +60,7 @@ body {
     font-size: 16px;
     line-height: 1.65;
     color: var(--text);
-    background: linear-gradient(180deg, #f9fafb 0%, var(--bg) 100%);
+    background: linear-gradient(180deg, var(--bg-gradient-start) 0%, var(--bg) 100%);
     font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -117,12 +133,12 @@ article img {
     max-width: 40%; border-radius: 10px; box-shadow: var(--shadow);
 }
 
-table { width: 100%; border-collapse: collapse; margin: var(--space-6) 0; background: #fff; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+table { width: 100%; border-collapse: collapse; margin: var(--space-6) 0; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
 th, td { font-size: 0.95rem; padding: 10px 12px; border-bottom: 1px solid var(--border); }
-th { text-align: left; color: #374151; background: #eaf3ff; }
+th { text-align: left; color: var(--text); background: var(--table-header-bg); }
 tr:nth-child(odd) td { background: #fafafa; }
 
-fieldset { width: 50%; padding: var(--space-5); margin: 0 0 var(--space-5) 0; border: 1px solid var(--border); border-radius: 12px; background: #f9fafb; }
+fieldset { width: 50%; padding: var(--space-5); margin: 0 0 var(--space-5) 0; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-muted); }
 fieldset legend { color: var(--primary); font-weight: 700; padding: 0 var(--space-2); }
 label { display: inline-block; width: 30%; color: #374151; margin-bottom: var(--space-2); }
 
@@ -131,6 +147,22 @@ select, input[type=text], input[type=email], input[type=password], textarea {
     border: 1px solid var(--border); border-radius: 10px; background: #fff;
     transition: border-color .2s ease, box-shadow .2s ease;
 }
+
+.form-group select {
+    padding: var(--space-3) var(--space-4);
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+    background: var(--surface);
+    color: var(--text);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.form-group select option {
+    background: var(--surface);
+    color: var(--text);
+}
+.form-group select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-50); }
 select:focus, input[type=text]:focus, input[type=email]:focus, input[type=password]:focus, textarea:focus {
     outline: none; border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-50);
 }

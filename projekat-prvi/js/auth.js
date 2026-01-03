@@ -1,5 +1,90 @@
 // Authentication functionality using Firebase
 
+// Theme support (shared with Angular)
+const THEME_STORAGE_KEY = 'themeId';
+
+function getDefaultThemeId() {
+    try {
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        return prefersDark ? 'dark' : 'blue';
+    } catch {
+        return 'blue';
+    }
+}
+
+async function loadThemes() {
+    try {
+        const res = await fetch('/themes.json', { cache: 'no-cache' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const json = await res.json();
+        return Array.isArray(json?.themes) ? json.themes : [];
+    } catch (e) {
+        console.warn('projekat-prvi(auth): Failed to load /themes.json', e);
+        return [];
+    }
+}
+
+function applyCssVars(vars) {
+    const root = document.documentElement;
+    Object.entries(vars || {}).forEach(([key, value]) => {
+        if (key && key.startsWith('--')) {
+            root.style.setProperty(key, String(value));
+        }
+    });
+}
+
+function applyTheme(themeId, themes) {
+    const root = document.documentElement;
+    root.setAttribute('data-theme', themeId);
+    if (themeId === 'dark') root.classList.add('dark-mode');
+    else root.classList.remove('dark-mode');
+
+    const match = (themes || []).find(t => t?.id === themeId);
+    if (match?.vars) {
+        applyCssVars(match.vars);
+    }
+}
+
+async function initThemeSelector() {
+    const select = document.getElementById('themeSelect');
+    const themes = await loadThemes();
+
+    // Apply initial theme
+    let stored = null;
+    try { stored = localStorage.getItem(THEME_STORAGE_KEY); } catch { /* ignore */ }
+    const currentThemeId = stored || getDefaultThemeId();
+    applyTheme(currentThemeId, themes);
+
+    if (!select) return;
+
+    // Populate options
+    if (themes.length) {
+        select.innerHTML = '';
+        themes.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.id;
+            opt.textContent = t.name;
+            select.appendChild(opt);
+        });
+    }
+
+    select.value = currentThemeId;
+    select.addEventListener('change', () => {
+        const next = select.value || 'blue';
+        try { localStorage.setItem(THEME_STORAGE_KEY, next); } catch { /* ignore */ }
+        applyTheme(next, themes);
+    });
+}
+
+// Run theme init early
+if (typeof document !== 'undefined') {
+    if (document.readyState !== 'loading') {
+        initThemeSelector();
+    } else {
+        document.addEventListener('DOMContentLoaded', () => initThemeSelector());
+    }
+}
+
 // Check if user is already logged in with Firebase
 function checkAuth() {
     return new Promise((resolve) => {
@@ -203,7 +288,7 @@ if (loginForm) {
 async function logout() {
     try {
         sessionStorage.clear();
-        localStorage.clear();
+        // Do NOT clear localStorage: theme and other app data should persist.
         await firebase.auth().signOut();
         console.log('User logged out - all sessions cleared');
         window.location.href = 'login.html';

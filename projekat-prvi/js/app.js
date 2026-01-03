@@ -1,6 +1,61 @@
 (function(){
   function ready(fn){ if(document.readyState!='loading'){ fn(); } else { document.addEventListener('DOMContentLoaded', fn); } }
 
+  var THEME_STORAGE_KEY = 'themeId';
+
+  function getDefaultThemeId(){
+    try {
+      var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      return prefersDark ? 'dark' : 'blue';
+    } catch(_){
+      return 'blue';
+    }
+  }
+
+  async function loadThemes(){
+    try {
+      var res = await fetch('/themes.json', { cache: 'no-cache' });
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      var json = await res.json();
+      return Array.isArray(json && json.themes) ? json.themes : [];
+    } catch(e){
+      console.warn('projekat-prvi: Failed to load /themes.json', e);
+      return [];
+    }
+  }
+
+  function applyCssVars(vars){
+    var root = document.documentElement;
+    Object.keys(vars || {}).forEach(function(key){
+      if(key && key.indexOf('--') === 0){
+        root.style.setProperty(key, String(vars[key]));
+      }
+    });
+  }
+
+  function applyTheme(themeId, themes){
+    var root = document.documentElement;
+    root.setAttribute('data-theme', themeId);
+    if(themeId === 'dark') root.classList.add('dark-mode');
+    else root.classList.remove('dark-mode');
+
+    var match = null;
+    for(var i=0;i<(themes||[]).length;i++){
+      if(themes[i] && themes[i].id === themeId){ match = themes[i]; break; }
+    }
+    if(match && match.vars){
+      applyCssVars(match.vars);
+    }
+  }
+
+  async function initTheme(){
+    var themes = await loadThemes();
+    var stored = null;
+    try { stored = localStorage.getItem(THEME_STORAGE_KEY); } catch(_) {}
+    var themeId = stored || getDefaultThemeId();
+    applyTheme(themeId, themes);
+  }
+
   function isToolsPage(){
     if(document.body && document.body.hasAttribute('data-tools')) return true;
     // Default: only on Student Fun Zone host page
@@ -77,6 +132,8 @@
   }
 
   function enhanceDropdown(){
+    // Student Fun Zone should only be visible/used in the Angular app.
+    return;
     var nav = document.querySelector('nav ul');
     if(!nav) return;
     // Find the li containing Student Fun Zone
@@ -136,6 +193,8 @@
   }
 
   function initFunZoneRouter(){
+    // Student Fun Zone should only be visible/used in the Angular app.
+    return;
     var container = document.getElementById('funzone-container');
     if(!container) return; // Only on StudentFunZone
 
@@ -203,6 +262,7 @@
   }
 
   ready(async function(){
+    await initTheme();
     createTools();
     injectModal();
     enhanceDropdown();

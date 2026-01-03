@@ -5,6 +5,11 @@
         <title>Kursevi IPI</title>
 		<link rel="stylesheet" href="css/izgled.css" type="text/css" />
         <link rel="icon" href="favicon.ico" />
+		<script>
+			// Student Fun Zone is available only in the Angular app.
+			// Redirect any direct access from projekat-prvi.
+			try { window.location.replace('/student-fun-zone'); } catch (e) {}
+		</script>
     </head>
     <body>
         <header>
@@ -16,7 +21,6 @@
 					<li><a href="index.html">O kursevima</a></li>
 					<li><a href="popis.html">Popis kurseva</a></li>
 					<li><a href="raspored.html">Raspored kurseva</a></li>
-					<li><a href="StudentFunZone.html">Student Fun Zone</a></li>
 					<li><a href="kontakt.html">Kontakt</a></li>
 					<!-- Login link will be added dynamically by app.js -->
 				</ul>

@@ -3,6 +3,7 @@ import { Router, RouterLink } from '@angular/router';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
+import { ThemeService, ThemeDefinition } from '../../services/theme.service';
 
 @Component({
   selector: 'app-login',
@@ -16,10 +17,30 @@ export class Login {
   errorMessage = '';
   loading = false;
 
+  themes: ThemeDefinition[] = [];
+  selectedThemeId = 'blue';
+
   constructor(
     private router: Router,
-    private authService: AuthService
+    private authService: AuthService,
+    public themeService: ThemeService
   ) {}
+
+  ngOnInit() {
+    // Populate theme list for selector.
+    this.themeService.themes$.subscribe(list => {
+      this.themes = list;
+      if (!this.selectedThemeId) {
+        this.selectedThemeId = this.themeService.getCurrentThemeId();
+      }
+    });
+
+    this.selectedThemeId = this.themeService.getCurrentThemeId();
+  }
+
+  onThemeChange() {
+    this.themeService.setTheme(this.selectedThemeId, true);
+  }
 
   async onSubmit() {
     if (!this.email || !this.password) {
@@ -32,6 +53,9 @@ export class Login {
 
     try {
       await this.authService.login(this.email, this.password);
+
+      // Switch/apply theme during login as required.
+      this.themeService.setTheme(this.selectedThemeId, true);
       
       console.log('User logged in successfully');
       
